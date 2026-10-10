@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b12">
+  <meta name="description" content="NEXUS, une interface de recherche de démonstration avec des données fictives.">
+  <title>NEXUS — Searcher</title>
+  <link rel="stylesheet" href="/css/style.css?v=search-red-layout-2">
+</head>
+<body>
+  <div class="rain-background" aria-hidden="true">
+    <span class="rain-layer"></span>
+  </div>
+  <a class="skip-link" href="#main">Passer au contenu</a>
+  <header class="topbar">
+    <a class="brand" href="/accueil" aria-label="NEXUS, accueil">
+      <img class="brand-mark" src="/assets/nexus-logo.png" alt="">
+      <span class="brand-name">NEXUS<small>SEARCH PLATFORM</small></span>
+    </a>
+    <nav class="navigation" aria-label="Navigation principale">
+      <button type="button" data-page="home">Accueil</button>
+      <button type="button" data-page="search" class="active">Recherche</button>
+      <button type="button" data-page="bavur">BAVUR</button>
+      <button type="button" data-page="blocus">BLOCUS</button>
+      <button type="button" data-page="discord">Discord</button>
+    </nav>
+    <div class="header-actions">
+      <div class="online-counter" id="onlineCounter" title="Nombre de visiteurs actuellement connectés" aria-live="polite">
+        <span class="online-dot" aria-hidden="true"></span>
+        <span class="online-count" id="onlineCount">0</span>
+        <span class="online-label">en ligne</span>
+      </div>
+      <button type="button" class="credit-pill" id="creditsPill" title="Voir mes crédits et le prochain renouvellement">Crédits</button>
+      <button type="button" class="header-button" data-page="account" id="accountNav">Connexion</button>
+      <button type="button" class="header-button admin-nav" data-page="admin">Admin</button>
+      <button type="button" class="header-logo-button" data-page="home" aria-label="Retour à l’accueil">
+        <img src="/assets/nexus-logo.png" alt="">
+      </button>
+    </div>
+  </header>
+
+  <main id="main" class="shell">
+    <section id="home" class="page home-page" aria-labelledby="home-title">
+      <div class="hero nexus-landing-hero">
+        <div class="hero-copy">
+          <span class="eyebrow"><i aria-hidden="true"></i> NEXUS SEARCHER</span>
+          <h1 id="home-title">NEXUS Searcher<br><em>reste accessible.</em></h1>
+          <p>Une interface claire pour retrouver rapidement les informations disponibles et parcourir les vidéos de la communauté.</p>
+          <button type="button" class="primary" data-page="search">Lancer une recherche <span aria-hidden="true">→</span></button>
+        </div>
+        <div class="hero-art nexus-logo-hero" aria-hidden="true">
+          <div class="logo-ring logo-ring-one"></div>
+          <div class="logo-ring logo-ring-two"></div>
+          <div class="logo-ring logo-ring-three"></div>
+          <div class="art-core"><img src="/assets/nexus-logo.png" alt=""></div>
+        </div>
+      </div>
+      <section class="featured-section" aria-labelledby="featured-title">
+        <div class="section-heading featured-heading">
+          <div><span class="eyebrow">AVANT-PREMIÈRE</span><h2 id="featured-title">Les dernières <em>vidéos.</em></h2><p>Les vidéos validées par l’administration apparaissent ici automatiquement.</p></div>
+        </div>
+        <div id="featuredVideos" class="video-grid" aria-live="polite"><p class="video-empty">Chargement des vidéos…</p></div>
+      </section>
+      <div class="feature-row">
+        <article class="feature">
+          <span class="feature-icon" aria-hidden="true">⌕</span>
+          <div><h2>Recherche flexible</h2><p>Combine plusieurs critères en quelques secondes.</p></div>
+        </article>
+        <article class="feature">
+          <span class="feature-icon" aria-hidden="true">◈</span>
+          <div><h2>Résultats lisibles</h2><p>Retrouve les informations dans une présentation claire.</p></div>
+        </article>
+        <article class="feature">
+          <span class="feature-icon" aria-hidden="true">✓</span>
+          <div><h2>Données de démonstration</h2><p>Teste l’interface sans utiliser de données réelles.</p></div>
+        </article>
+      </div>
+      <section class="review-section" aria-labelledby="reviews-title">
+        <div class="review-heading">
+          <div><span class="eyebrow">RETOURS DE DÉMONSTRATION</span><h2 id="reviews-title">Retours <em>utilisateurs.</em></h2></div>
+          <span class="review-disclaimer">Les témoignages affichés doivent être validés avant publication.</span>
+        </div>
+        <div class="review-grid">
+          <article class="review-item">
+            <div class="review-stars" aria-label="5 étoiles sur 5">★★★★★</div>
+            <blockquote>« Les critères sont faciles à trouver et la recherche reste claire. »</blockquote>
+            <p>Camille · retour utilisateur</p>
+          </article>
+          <article class="review-item">
+            <div class="review-stars" aria-label="5 étoiles sur 5">★★★★★</div>
+            <blockquote>« J’aime pouvoir regrouper les filtres sans perdre le fil. »</blockquote>
+            <p>Alex · retour utilisateur</p>
+          </article>
+          <article class="review-item">
+            <div class="review-stars" aria-label="5 étoiles sur 5">★★★★★</div>
+            <blockquote>« L’interface est simple à parcourir, même sur mobile. »</blockquote>
+            <p>Noa · retour utilisateur</p>
+          </article>
+        </div>
+      </section>
+    </section>
+
+    <section id="search" class="page search-page active" aria-labelledby="search-title">
+      <div class="layout">
+        <aside class="card filters" aria-label="Critères de recherche">
+          <div class="filters-heading">
+            <div>
+              <h1 id="search-title">Critères de recherche</h1>
+              <p>Remplissez un ou plusieurs champs, puis lancez la recherche.</p>
+            </div>
+            <span id="selected" class="selected-count" aria-live="polite">0 critère</span>
+          </div>
+          <div id="fields"></div>
+          <div class="filter-footer">
+            <span class="filter-count" aria-live="polite">0 critère actif</span>
+            <div class="filter-actions">
+              <button type="button" id="searchBtn" class="primary search-button">→ <span>Rechercher</span></button>
+              <button type="button" id="clear" class="secondary-button filter-clear">⌫ <span>Effacer</span></button>
+            </div>
+          </div>
+        </aside>
+
+        <section class="card results" aria-labelledby="results-title">
+          <div class="card-heading results-heading">
+            <div><span class="card-kicker">EXPLORATION</span><h2 id="results-title">Aperçu des résultats</h2></div>
+            <span id="count" class="result-count" aria-live="polite">0</span>
+          </div>
+          <div id="state" class="state" aria-live="polite">
+            <strong aria-hidden="true">⌕</strong>
+            <b>Aucune recherche</b>
+            <span>Lance une recherche pour afficher les résultats.</span>
+          </div>
+          <div id="output" aria-live="polite"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="discord" class="page discord-page" aria-labelledby="discord-title">
+      <div class="discord-panel">
+        <div class="discord-emblem" aria-hidden="true">D</div>
+        <span class="eyebrow">ESPACE COMMUNAUTÉ</span>
+        <h1 id="discord-title">Rejoins le <em>Discord.</em></h1>
+        <p>Retrouve la communauté NEXUS et ses créateurs sur notre serveur Discord.</p>
+        <a class="primary discord-join" href="https://discord.gg/2tkdUSRPMk" target="_blank" rel="noopener noreferrer">Rejoindre le Discord <span aria-hidden="true">↗</span></a>
+        <div class="discord-placeholder"><span aria-hidden="true">✦</span> Créateurs : !303 error X sportback57</div>
+      </div>
+    </section>
+
+    <section id="bavur" class="page category-page" aria-labelledby="bavur-title">
+      <div class="section-heading">
+        <div><span class="eyebrow">VIDÉOS COMMUNAUTAIRES</span><h1 id="bavur-title"><em>BAVUR</em></h1>
+          <p>Envoie une vidéo MP4 ou MOV. Elle sera visible après validation par l’administrateur.</p></div>
+      </div>
+      <div id="bavurNotice" class="account-notice" role="status"></div>
+      <form id="bavurUpload" class="card upload-form" enctype="multipart/form-data">
+        <input type="hidden" name="category" value="BAVUR">
+        <label class="auth-field">Titre<input name="title" type="text" maxlength="100" required></label>
+        <label class="auth-field">Description<textarea name="description" maxlength="1000" rows="3"></textarea></label>
+        <label class="auth-field">Vidéo MP4 / MOV (500 Mo maximum)<input name="video" type="file" accept="video/mp4,.mp4,video/quicktime,.mov" required></label>
+        <button class="primary auth-submit" type="submit">Envoyer pour validation</button>
+      </form>
+      <div id="bavurVideos" class="video-grid" aria-live="polite"></div>
+    </section>
+
+    <section id="blocus" class="page category-page" aria-labelledby="blocus-title">
+      <div class="section-heading">
+        <div><span class="eyebrow">VIDÉOS COMMUNAUTAIRES</span><h1 id="blocus-title"><em>BLOCUS</em></h1>
+          <p>Envoie une vidéo MP4 ou MOV. Elle sera visible après validation par l’administrateur.</p></div>
+      </div>
+      <div id="blocusNotice" class="account-notice" role="status"></div>
+      <form id="blocusUpload" class="card upload-form" enctype="multipart/form-data">
+        <input type="hidden" name="category" value="BLOCUS">
+        <label class="auth-field">Titre<input name="title" type="text" maxlength="100" required></label>
+        <label class="auth-field">Description<textarea name="description" maxlength="1000" rows="3"></textarea></label>
+        <label class="auth-field">Vidéo MP4 / MOV (500 Mo maximum)<input name="video" type="file" accept="video/mp4,.mp4,video/quicktime,.mov" required></label>
+        <button class="primary auth-submit" type="submit">Envoyer pour validation</button>
+      </form>
+      <div id="blocusVideos" class="video-grid" aria-live="polite"></div>
+    </section>
+
+    <section id="account" class="page account-page" aria-labelledby="account-title">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">ESPACE MEMBRE</span>
+          <h1 id="account-title">Compte <em>NEXUS</em></h1>
+          <p>Chaque compte reçoit 5 crédits. Une recherche coûte 1 crédit.</p>
+        </div>
+      </div>
+      <div id="accountNotice" class="account-notice" role="status">Comptes protégés par Supabase Auth.</div>
+      <div id="accountForms" class="auth-single">
+        <form id="signupForm" class="card auth-card">
+          <span class="card-kicker">NOUVEAU MEMBRE</span>
+          <h2>Créer un compte</h2>
+          <p class="auth-note">Chaque nouveau compte reçoit 5 crédits. Une adresse e-mail est utilisée pour sécuriser le compte.</p>
+          <label class="auth-field">Adresse e-mail<input name="email" type="email" maxlength="254" autocomplete="email" required><small>Utilise une adresse e-mail valide.</small></label>
+          <label class="auth-field">Nom d’utilisateur<input name="username" type="text" minlength="3" maxlength="32" pattern="[\-A-Za-z0-9_.]{3,32}" autocomplete="username" required><small>3 à 32 caractères : lettres, chiffres, points, tirets ou _</small></label>
+          <label class="auth-field">Mot de passe<input name="password" type="password" minlength="8" maxlength="256" autocomplete="new-password" required><small>8 caractères minimum</small></label>
+          <button class="primary auth-submit" type="submit">Créer mon compte</button>
+          <button type="button" class="secondary-button auth-switch" id="showLoginButton">Se connecter</button>
+        </form>
+        <form id="loginForm" class="card auth-card" hidden>
+          <span class="card-kicker">DÉJÀ INSCRIT</span>
+          <h2>Connexion</h2>
+          <label class="auth-field">Adresse e-mail<input name="email" type="email" maxlength="254" autocomplete="email" required></label>
+          <label class="auth-field">Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
+          <button class="primary auth-submit" type="submit">Se connecter</button>
+          <button type="button" class="secondary-button auth-switch" id="showSignupButton">Créer un compte</button>
+        </form>
+      </div>
+      <section id="accountProfile" class="card account-profile" hidden>
+        <span class="card-kicker">SESSION ACTIVE</span>
+        <h2>Bonjour, <span id="profileUsername"></span></h2>
+        <p class="account-detail">Compte sécurisé par Supabase Auth.</p>
+        <p class="account-credits">Crédits disponibles : <strong id="profileCredits">0</strong></p>
+        <p class="account-reset" id="creditResetCountdown">Connecte-toi pour voir le renouvellement.</p>
+        <div class="profile-actions">
+          <button type="button" class="primary" id="logoutButton">Se déconnecter</button>
+        </div>
+        <p class="account-footnote">L’historique admin peut conserver les critères saisis pour la modération et le suivi du service.</p>
+      </section>
+    </section>
+
+    <section id="admin" class="page admin-page" aria-labelledby="admin-title">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">ACCÈS RESTREINT</span>
+          <h1 id="admin-title">Console <em>admin</em></h1>
+          <p>Connecte-toi avec le compte administrateur.</p>
+        </div>
+      </div>
+      <div id="adminNotice" class="account-notice" role="status">Le compte administrateur doit être configuré dans Supabase.</div>
+      <div id="adminGate" class="card admin-gate">
+        <span class="admin-lock" aria-hidden="true">⌑</span>
+        <h2>Accès administrateur</h2>
+        <p id="adminGateDescription">Connecte-toi sur la page Connexion avec l’adresse e-mail du compte administrateur et son mot de passe.</p>
+        <button type="button" class="primary" data-page="account" id="adminLoginLink">Ouvrir la connexion</button>
+      </div>
+      <div id="adminDashboard" class="admin-dashboard" hidden>
+        <section class="card admin-card maintenance-admin-card" aria-labelledby="maintenance-admin-title">
+          <div class="card-heading"><div><span class="card-kicker">ACCÈS AU SITE</span><h2 id="maintenance-admin-title">Mode maintenance</h2></div><span id="maintenanceStatusBadge" class="admin-status-dot">OUVERT</span></div>
+          <p id="maintenanceAdminDescription" class="card-description">Le site est actuellement ouvert.</p>
+          <form id="maintenanceForm" class="credit-send-form">
+            <label class="auth-field">Raison de la fermeture
+              <textarea id="maintenanceReasonInput" name="reason" rows="3" maxlength="500" placeholder="Ex. Mise à jour du site…"></textarea>
+            </label>
+            <div class="maintenance-actions">
+              <button type="submit" class="primary" id="closeSiteBtn">Fermer le site</button>
+              <button type="button" class="secondary-button" id="reopenSiteBtn">Rouvrir le site</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card admin-card admin-credits-card" aria-labelledby="credits-admin-title">
+          <div class="card-heading"><div><span class="card-kicker">GESTION DES COMPTES</span><h2 id="credits-admin-title">Gérer les crédits</h2></div><span class="admin-status-dot">ADMIN</span></div>
+          <p class="card-description">Choisis un pseudo dans la liste puis définis directement son nombre de crédits.</p>
+          <form id="setCreditsForm" class="credit-send-form">
+            <label class="auth-field">Utilisateur
+              <select name="user_id" id="creditUserSelect" required><option value="">Chargement des pseudos…</option></select>
+            </label>
+            <label class="auth-field">Crédits
+              <input name="credits" type="number" min="0" max="1000000000" value="5" required>
+            </label>
+            <button type="submit" class="primary">Enregistrer</button>
+          </form>
+        </section>
+
+        <section id="adminModeration" class="card admin-card" aria-labelledby="moderation-title">
+          <div class="card-heading"><div><span class="card-kicker">MODÉRATION</span><h2 id="moderation-title">BAVUR &amp; BLOCUS</h2></div><button type="button" id="refreshVideos" class="secondary-button">Actualiser</button></div>
+          <p class="card-description">Valide ou refuse les vidéos en attente. Tu peux aussi supprimer définitivement une vidéo déjà publiée ou en attente.</p>
+          <div id="pendingVideos" class="video-grid"></div>
+        </section>
+
+        <section id="adminUserList" class="card admin-card" aria-labelledby="users-title">
+          <div class="card-heading"><div><span class="card-kicker">COMPTES INSCRITS</span><h2 id="users-title">Utilisateurs</h2></div><button type="button" id="refreshUsers" class="secondary-button">Actualiser</button></div>
+          <div id="usersList" class="users-list"></div>
+          <button type="button" id="loadMoreUsers" class="secondary-button load-more" hidden>Charger plus d’utilisateurs</button>
+        </section>
+
+        <section id="userLogsPanel" class="card admin-card user-logs-panel" hidden>
+          <div class="card-heading"><div><span class="card-kicker">JOURNAL PERSONNEL</span><h2 id="userLogsTitle">Activité</h2></div><button type="button" id="backToUsers" class="secondary-button">← Tous les utilisateurs</button></div>
+          <div id="userLogs" class="user-logs"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div class="credit-modal" id="creditModal" hidden aria-hidden="true">
+    <div class="credit-modal-card" role="dialog" aria-modal="true" aria-labelledby="creditModalTitle">
+      <button type="button" class="credit-modal-close" id="closeCreditModal" aria-label="Fermer">×</button>
+      <span class="eyebrow">NEXUS CREDITS</span>
+      <h2 id="creditModalTitle">Tes <em>crédits.</em></h2>
+      <div class="credit-balance"><strong id="creditModalBalance">0</strong><span>crédits disponibles</span></div>
+      <p class="credit-reset" id="creditModalReset">Prochain renouvellement : —</p>
+      <small>5 crédits sont automatiquement renouvelés chaque jour. Une recherche consomme 1 crédit.</small>
+    </div>
+  </div>
+
+  <div id="maintenanceOverlay" class="maintenance-overlay" hidden aria-live="polite">
+    <div class="maintenance-card">
+      <span class="card-kicker">NEXUS</span>
+      <h2>Site temporairement fermé</h2>
+      <p id="maintenanceReason">Maintenance en cours.</p>
+      <p class="maintenance-note">Le site sera de nouveau accessible dès que l’administrateur aura terminé la maintenance.</p>
+      <button type="button" class="secondary-button" data-page="account">Connexion administrateur</button>
+    </div>
+  </div>
+
+  <footer><span class="footer-mark">N</span> Searcher by !303 error ✘ sportback57</footer>
+  <script defer src="/js/config.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="/js/app.js?v=search-red-layout-2"></script>
+</body>
+</html>
