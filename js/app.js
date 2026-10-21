@@ -98,7 +98,6 @@ let adminUsersOffset=0;
 let selectedAdminUser=null;
 let siteMaintenance=false;
 let siteMaintenanceReason="";
-let siteTheme={name:"violet",color:"#9b5cff"};
 const adminPageSize=100;
 const fields=$("#fields");
 
@@ -144,6 +143,7 @@ function updateFilters(){
  const count=[...document.querySelectorAll("[data-key]")].filter(input=>input.value.trim()).length;
  $("#selected").textContent=`${count} critère${count===1?"":"s"}`;
  $(".filter-count").textContent=`${count} critère${count===1?"":"s"} actif${count===1?"":"s"}`;
+ window.NexusInterface?.updateFilters();
 }
 let creditCountdownTimer=null;
 function formatResetCountdown(resetAt){
@@ -191,51 +191,6 @@ document.querySelectorAll("[data-key]").forEach(input=>{
  input.addEventListener("input",updateFilters);
  input.addEventListener("change",updateFilters);
 });
-
-const SITE_THEMES={
- violet:{name:"Violet",color:"#9b5cff",rgb:"155,92,255",light:"#bd91ff",dark:"#5f2bb8"},
- blue:{name:"Bleu",color:"#3d8bff",rgb:"61,139,255",light:"#79adff",dark:"#1f56b5"},
- green:{name:"Vert",color:"#20c77a",rgb:"32,199,122",light:"#67e0a6",dark:"#087c4b"},
- orange:{name:"Orange",color:"#ff8a30",rgb:"255,138,48",light:"#ffb16f",dark:"#b84d0a"},
- pink:{name:"Rose",color:"#ff4fa3",rgb:"255,79,163",light:"#ff8bc2",dark:"#b51e68"}
-};
-function hexToRgb(hex){const m=String(hex||"").match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);return m?`${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)}`:"155,92,255"}
-function applySiteTheme(theme){
- const requestedColor=String(theme?.color||theme?.theme_color||"#9b5cff").toLowerCase();
- const legacyRed=requestedColor==="#ff3038";
- const color=legacyRed?"#9b5cff":requestedColor;
- const preset=Object.values(SITE_THEMES).find(item=>item.color===color)||{name:"Personnalisé",color,rgb:hexToRgb(color),light:color,dark:color};
- siteTheme={name:legacyRed?"Violet":String(theme?.name||theme?.theme_name||preset.name),color, rgb:preset.rgb||hexToRgb(color),light:preset.light||color,dark:preset.dark||color};
- const root=document.documentElement;
- root.style.setProperty("--accent",siteTheme.color);
- root.style.setProperty("--accent-rgb",siteTheme.rgb);
- root.style.setProperty("--accent-light",siteTheme.light);
- root.style.setProperty("--accent-dark",siteTheme.dark);
- root.style.setProperty("--theme-glow",`rgba(${siteTheme.rgb},`);
- document.body?.setAttribute("data-site-theme",siteTheme.name.toLowerCase());
- const colorInput=$("#siteThemeColor"); if(colorInput)colorInput.value=siteTheme.color;
- const preview=$("#themePreviewText"); if(preview)preview.textContent=`${siteTheme.name} · ${siteTheme.color.toUpperCase()}`;
- document.querySelectorAll(".theme-swatch").forEach(btn=>btn.classList.toggle("active",btn.dataset.themePreset===Object.keys(SITE_THEMES).find(key=>SITE_THEMES[key].color===siteTheme.color)));
-}
-async function loadSiteTheme(){
- try{
-  const client=supabaseReady();
-  const {data,error}=await client.rpc("nexus_get_site_theme");
-  if(error)throw error;
-  const theme=Array.isArray(data)?data[0]:data;
-  if(theme)applySiteTheme(theme);
- }catch(error){console.warn("Impossible de charger le thème global :",error?.message||error)}
-}
-async function saveSiteTheme(){
- if(!currentUser?.is_admin)throw new Error("Accès administrateur requis");
- const color=$("#siteThemeColor")?.value||"#9b5cff";
- const preset=Object.values(SITE_THEMES).find(item=>item.color===color);
- const name=preset?.name||"Personnalisé";
- const {data,error}=await supabaseReady().rpc("nexus_set_site_theme",{p_name:name,p_color:color});
- if(error)throw error;
- const theme=Array.isArray(data)?data[0]:data;
- applySiteTheme(theme||{name,color});
-}
 
 async function loadMaintenanceStatus(){
  try{
@@ -321,19 +276,34 @@ function displayValue(value){
 }
 function showResults(items){
  currentResults=items;
- $("#state").classList.toggle("hide",items.length>0);$("#count").textContent=items.length;$("#output").replaceChildren();
+ $("#results-title").closest(".results").setAttribute("aria-busy","false");
+ $("#state").classList.remove("is-loading");
+ $("#state").classList.toggle("hide",items.length>0);
+ $("#count").textContent=items.length;
+ $("#output").replaceChildren();
  if(!items.length){
-  $("#state").innerHTML=`<strong>0</strong><b>Aucun résultat</b><span>La recherche n’a renvoyé aucun résultat.</span>`;
-  return;
+  $("#state").innerHTML=`<strong aria-hidden="true">⌕</strong><b>Aucun résultat pour le moment.</b><span>Essaie avec moins de critères ou une autre combinaison.</span>`;
  }
+ const fragment=document.createDocumentFragment();
  items.forEach((result,index)=>{
   const all=resultFields(result);
-  const title=result.nom_affichage||`${result.prenom||""} ${result.nom_famille||""}`.trim()||`Résultat ${index+1}`;
-  $("#output").insertAdjacentHTML("beforeend",`<article class="result">
-   <div class="rhead"><div class="avatar">${result.genre==="Femme"?"👩":result.genre==="Homme"?"👨":"👤"}</div><div><b>${esc(title)}</b><small>RÉSULTAT #${String(index+1).padStart(2,"0")}</small></div><button type="button" class="copy-result" data-result-index="${index}">⧉ Copier</button><span class="match">✓ MATCH</span></div>
-   <div class="allfields">${all.map(([key,value])=>`<div class="kv"><span>${resultEmojis[key]||"✨"} ${esc(fieldLabels[key]||key.replace(/_/g," "))}</span><strong>${esc(displayValue(value))}</strong></div>`).join("")}</div>
-  </article>`);
+  const title=String(result.nom_affichage||`${result.prenom||""} ${result.nom_famille||""}`.trim()||`Résultat ${index+1}`);
+  const initials=title.split(/\s+/).filter(Boolean).slice(0,2).map(part=>Array.from(part)[0]).join("").toUpperCase();
+  const article=document.createElement("article");article.className="result";
+  article.style.setProperty("--result-delay",`${Math.min(index,6)*45}ms`);
+  article.innerHTML=`<div class="rhead"><div class="avatar" aria-hidden="true">${esc(initials)}</div><div><small>FICHE ${String(index+1).padStart(2,"0")}</small><h3>${esc(title)}</h3></div><button type="button" class="copy-result" data-result-index="${index}" aria-label="Copier la fiche ${esc(title)}">⧉ Copier</button></div>
+   <div class="result-meta"><span class="result-meta-dot" aria-hidden="true"></span>${all.length} information${all.length===1?"":"s"} disponible${all.length===1?"":"s"}</div>`;
+  const fieldGrid=document.createElement("dl");fieldGrid.className="allfields";
+  for(const [key,value] of all){
+   const pair=document.createElement("div");pair.className="kv";
+   const label=document.createElement("dt");label.append(makeIcon(fieldIcons[key],"field-icon"),document.createTextNode(fieldLabels[key]||key.replace(/_/g," ")));
+   const content=document.createElement("dd");content.textContent=displayValue(value);
+   pair.append(label,content);fieldGrid.appendChild(pair);
+  }
+  article.appendChild(fieldGrid);fragment.appendChild(article);
  });
+ $("#output").appendChild(fragment);
+ window.NexusInterface?.updateResults();
 }
 function formatResultForCopy(result){
  const fields=resultFields(result);
@@ -391,16 +361,41 @@ function errorMessage(value){
  return String(value??"Erreur inconnue");
 }
 function showState(title,message){
+ const loading=title==="Recherche…";
+ $("#results-title").closest(".results").setAttribute("aria-busy",String(loading));
+ $("#state").classList.toggle("is-loading",loading);
+ $("#resultTools").hidden=true;$("#resultSummary").hidden=true;
  $("#state").classList.remove("hide");
- $("#state").innerHTML=`<strong>!</strong><b>${esc(title)}</b><span>${esc(message)}</span>`;
+ $("#state").innerHTML=`<strong aria-hidden="true">${loading?"⌕":"!"}</strong><b>${esc(title)}</b><span>${esc(message)}</span>`;
+ currentResults=[];
  $("#output").replaceChildren();$("#count").textContent="—";
 }
 function extractSearchResults(body){
- if(Array.isArray(body))return body;
- if(!body||typeof body!=="object")throw Error("La réponse de la source n’est pas au format attendu.");
- const results=body.data?.results??body.results??body.data;
- if(!Array.isArray(results))throw Error("Format de réponse inattendu : résultats introuvables.");
+ if(body && !Array.isArray(body) && (body.error || body.success===false))throw Error(errorMessage(body.error||body.message||"La source a refusé la recherche."));
+ const results=Array.isArray(body)?body:body?.data?.results??body?.results??body?.data;
+ if(!Array.isArray(results)||results.some(item=>!item||typeof item!=="object"||Array.isArray(item)))throw Error("La réponse de la source ne contient pas de fiches valides.");
  return results;
+}
+
+async function fetchWithTimeout(resource,options={},timeout=25000){
+ const controller=new AbortController();
+ const abort=()=>controller.abort();
+ if(options.signal?.aborted)controller.abort();
+ else options.signal?.addEventListener("abort",abort,{once:true});
+ const timer=setTimeout(abort,timeout);
+ try{
+  const response=await fetch(resource,{...options,signal:controller.signal});
+  // Read the body before clearing the timer, including slow or interrupted responses.
+  const raw=await response.text();
+  return {response,raw};
+ }catch(error){
+  if(controller.signal.aborted)throw Error("Le délai de réponse est dépassé. Réessaie dans quelques instants.");
+  if(error instanceof TypeError)throw Error("La source est inaccessible. Vérifie ta connexion ; si le problème persiste, le service doit autoriser les requêtes de ce site (CORS).");
+  throw error;
+ }finally{
+  clearTimeout(timer);
+  options.signal?.removeEventListener("abort",abort);
+ }
 }
 
 function getSupabase(){
@@ -431,7 +426,7 @@ async function getProfileForUser(authUser){
   console.warn("RPC crédits indisponible, lecture directe du profil :",error?.message||error);
  }
  const {data,error}=await client.from("nexus_profiles")
-  .select("id,username,is_admin,credits,created_at,credits_reset_at")
+  .select("id,username,is_admin,credits,created_at")
   .eq("id",authUser.id).maybeSingle();
  if(error)throw new Error(error.message);
  if(!data)throw new Error("Profil du compte introuvable.");
@@ -503,49 +498,73 @@ async function api(path,options={}){
  }
  return payload;
 }
+async function searchRpc(client,name,args){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),20000);
+ try{return await client.rpc(name,args).abortSignal(controller.signal)}
+ finally{clearTimeout(timer)}
+}
+
 $("#searchBtn").addEventListener("click",async()=>{
- const criteria={};
- document.querySelectorAll("[data-key]").forEach(input=>{if(input.value.trim())criteria[input.dataset.key]=input.value.trim()});
- if(!Object.keys(criteria).length){showState("Aucun critère","Saisis au moins un critère.");return}
- if(!currentUser){page("account");setNotice($("#accountNotice"),"Connecte-toi pour effectuer une recherche.","error");return}
- const endpoint=(window.NEXUS_CONFIG?.endpoint||"").trim();
- if(!endpoint){showState("Source non configurée","Ajoute une source de recherche autorisée dans js/config.js.");return}
  const searchButton=$("#searchBtn");
  if(searchButton.disabled)return;
+ const criteria={};
+ for(const input of document.querySelectorAll("#fields [data-key]")){
+  if(!input.checkValidity()){input.closest(".group").querySelector(".group-toggle").setAttribute("aria-expanded","true");input.closest(".group-content").hidden=false;const extra=input.closest("details");if(extra)extra.open=true;input.reportValidity();return}
+  if(input.value.trim())criteria[input.dataset.key]=input.value.trim();
+ }
+ if(!Object.keys(criteria).length){showState("Aucun critère","Saisis au moins un critère.");return}
+ if(criteria.date_naissance){
+  const [year,month,day]=criteria.date_naissance.split("-").map(Number);
+  if([["annee_naissance",year],["mois_naissance",month],["jour_naissance",day]].some(([key,value])=>criteria[key]&&Number(criteria[key])!==value)){
+   showState("Date incohérente","La date exacte et les champs jour, mois ou année doivent correspondre.");return;
+  }
+ }
+ if(criteria.jour_naissance&&criteria.mois_naissance){
+  const year=Number(criteria.annee_naissance||2000),month=Number(criteria.mois_naissance),day=Number(criteria.jour_naissance);
+  if(new Date(Date.UTC(year,month-1,day)).getUTCMonth()!==month-1){showState("Date invalide","Vérifie le jour et le mois de naissance.");return}
+ }
+ if(!currentUser){page("account");setNotice($("#accountNotice"),"Connecte-toi pour effectuer une recherche.","error");return}
+ const user=currentUser;
+ if(!user.unlimited_credits&&Number(user.credits)<1){showState("Crédits insuffisants","Tu n’as plus de crédits disponibles. Consulte ton solde et le prochain renouvellement.");return}
+ const endpoint=(window.NEXUS_CONFIG?.endpoint||"").trim();
+ if(!endpoint){showState("Source non configurée","Ajoute une source de recherche autorisée dans js/config.js.");return}
  searchButton.disabled=true;
- let charged=false;
+ const buttonLabel=searchButton.querySelector("span");
+ const originalLabel=buttonLabel?.textContent;
+ if(buttonLabel)buttonLabel.textContent="Recherche en cours…";
  try{
-  showState("Recherche…","Interrogation de la source configurée.");
+  showState("Recherche…","Interrogation de la source configurée. Cela peut prendre quelques secondes.");
   const client=supabaseReady();
-  const {data:billing,error:billingError}=await client.rpc("nexus_start_search",{p_criteria:criteria});
-  if(billingError)throw Error(`Impossible de démarrer la recherche : ${billingError.message}`);
-  const billingData=Array.isArray(billing)?billing[0]:billing;
-  if(!billingData)throw Error("La réservation du crédit n’a pas renvoyé de réponse.");
-  currentUser.credits=Number(billingData.credits);
-  currentUser.unlimited_credits=Boolean(billingData.unlimited_credits);
-  currentUser.credits_reset_at=billingData.next_reset_at||currentUser.credits_reset_at;
-  updateCreditDisplays();
-  charged=true;
-  const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(criteria)});
-  const raw=await response.text();
-  let body={};
-  try{body=raw?JSON.parse(raw):{}}catch{body={raw}}
-  if(!response.ok){
-    const detail=errorMessage(body?.error??body?.message??body?.detail??body?.raw);
-    throw Error(detail||`La source a répondu HTTP ${response.status}.`);
-  }
+  const {response,raw}=await fetchWithTimeout(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(criteria)});
+  let body;
+  try{body=JSON.parse(raw)}catch{throw Error(`La source a renvoyé une réponse illisible (HTTP ${response.status}).`)}
+  if(!response.ok)throw Error(errorMessage(body?.error??body?.message??body?.detail??`La source a répondu HTTP ${response.status}.`));
   const results=extractSearchResults(body);
-  const {error:logError}=await client.rpc("nexus_finish_search",{p_search_id:billingData.search_id,p_result_count:results.length});
-  if(logError)console.warn("Historique de recherche non enregistré :",logError.message);
-  showResults(results);
- }catch(error){
-  if(Number.isInteger(error.credits)){currentUser.credits=error.credits;updateCreditDisplays()}
-  if(error.status===402)showState("Crédits insuffisants",error.message);
-  else {
-   const message=errorMessage(error);
-   showState("Erreur",charged?`${message} Un crédit a été consommé pour cette tentative.`:message);
+  if(currentUser?.id!==user.id)throw Error("Ta session a changé. Connecte-toi puis relance la recherche.");
+  // Only debit once a valid response is available; failed requests cost no credit.
+  const {data:billing,error:billingError}=await searchRpc(client,"nexus_start_search",{p_criteria:criteria});
+  if(billingError)throw Error(`Impossible de valider la recherche : ${billingError.message}`);
+  const billingData=Array.isArray(billing)?billing[0]:billing;
+  if(!billingData?.search_id)throw Error("La validation du crédit n’a pas renvoyé de réponse exploitable. Vérifie ton solde avant de réessayer.");
+  if(currentUser?.id===user.id){
+   currentUser.credits=Number(billingData.credits);
+   currentUser.unlimited_credits=Boolean(billingData.unlimited_credits);
+   currentUser.credits_reset_at=billingData.next_reset_at||currentUser.credits_reset_at;
+   updateCreditDisplays();
+   showResults(results);
   }
- }finally{searchButton.disabled=false}
+  // A history failure must never hide results that have already been paid for.
+  try{
+   const {error:logError}=await searchRpc(client,"nexus_finish_search",{p_search_id:billingData.search_id,p_result_count:results.length});
+   if(logError)console.warn("Historique de recherche non enregistré :",logError.message);
+  }catch(error){console.warn("Historique de recherche non enregistré :",errorMessage(error))}
+ }catch(error){
+  showState("Recherche impossible",errorMessage(error));
+ }finally{
+  searchButton.disabled=false;
+  if(buttonLabel)buttonLabel.textContent=originalLabel;
+ }
 });
 
 const creditPill=$("#creditsPill");
@@ -674,7 +693,8 @@ async function startOnlineCounter(){
 
 const initialSupabase=getSupabase();
 if(initialSupabase){
- initialSupabase.auth.onAuthStateChange(async (_event,session)=>{
+ initialSupabase.auth.onAuthStateChange((_event,session)=>{
+   setTimeout(async()=>{
    try{
      currentUser=session?.user?await getProfileForUser(session.user):null;
      renderAccount();
@@ -682,6 +702,7 @@ if(initialSupabase){
      currentUser=null; renderAccount();
      setNotice(accountNotice,error.message,"error");
    }
+   },0);
  });
 
 }
@@ -985,21 +1006,6 @@ $("#reopenSiteBtn").addEventListener("click",async()=>{
  finally{button.disabled=false}
 });
 
-document.querySelectorAll("[data-theme-preset]").forEach(button=>button.addEventListener("click",()=>{
- const preset=SITE_THEMES[button.dataset.themePreset];
- if(!preset)return;
- applySiteTheme(preset);
-}));
-$("#siteThemeColor")?.addEventListener("input",event=>applySiteTheme({name:"Personnalisé",color:event.target.value}));
-$("#siteThemeForm")?.addEventListener("submit",async event=>{
- event.preventDefault();
- if(!currentUser?.is_admin)return;
- const button=$("#saveSiteTheme"); if(button)button.disabled=true;
- try{await saveSiteTheme();setNotice(adminNotice,"Couleur du site mise à jour pour tout le monde.","success");}
- catch(error){setNotice(adminNotice,`Impossible de changer la couleur : ${error.message}`,"error");}
- finally{if(button)button.disabled=false;}
-});
-
 function openAdmin(){
  $("#adminDashboard").hidden=true;$("#adminGate").hidden=false;
  $("#adminUserList").hidden=false;$("#userLogsPanel").hidden=true;
@@ -1011,7 +1017,7 @@ function openAdmin(){
  if(currentUser.is_admin){
   $("#adminGate").hidden=true;$("#adminDashboard").hidden=false;
   setNotice(adminNotice,"Accès administrateur vérifié.","success");
-  loadSiteTheme();loadMaintenanceStatus();loadAdminUsers();loadPendingVideos();return;
+  loadMaintenanceStatus();loadAdminUsers();loadPendingVideos();return;
  }
  $("#adminGateDescription").textContent="Ce compte n’a pas les droits administrateur.";
  $("#adminLoginLink").hidden=false;
@@ -1024,7 +1030,6 @@ async function initialize(){
  // Les fonctions backend sont chargées en arrière-plan.
  renderAccount();
  try{await refreshSession()}catch(error){console.warn("Session indisponible :",error?.message||error)}
- try{await loadSiteTheme()}catch(error){console.warn("Thème indisponible :",error?.message||error)}
  try{await loadMaintenanceStatus()}catch(error){console.warn("Maintenance indisponible :",error?.message||error)}
  renderMaintenanceStatus();
  setNotice(accountNotice,currentUser?"Session restaurée.":"Inscris-toi ou connecte-toi pour continuer.",currentUser?"success":"info");

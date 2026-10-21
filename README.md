@@ -2,6 +2,29 @@
 
 Version statique compatible Vercel, avec authentification Supabase, recherche côté navigateur, journal des recherches, modération BAVUR/BLOCUS et console admin.
 
+## Interface NEXUS — V46
+
+- Palette fixe : violet, bleu et noir, avec des textes clairs pour la lisibilité. Aucun réglage de couleur admin ni chargement du thème Supabase.
+- Asset `assets/nexus-logo.png` intégré à l’accueil, au moteur, aux pages de compte et de communauté, au pied de page et au favicon. Sa teinte est harmonisée en CSS.
+- Recherche : validation des dates, protection contre les doubles clics, délai maximal de 25 secondes pour la source et de 20 secondes pour les opérations de crédit. Un appel à la source en échec ne déclenche pas de débit. Le crédit est validé après réception de fiches au format attendu ; un résultat vide valide consomme un crédit.
+- Le moteur continue d’appeler directement `NEXUS_CONFIG.endpoint` : la source doit autoriser le domaine du site via CORS. Aucun proxy `/api/search` n’est fourni.
+- Les résultats restent visibles si l’enregistrement final dans l’historique échoue.
+- Vérification locale sur macOS : `python3 tests/verify_search.py` (JavaScriptCore système, aucune dépendance à installer).
+
+## Présentation commune
+
+- Direction visuelle NEXUS : fond noir, accents violets et bleus, grand titre central, aperçu du moteur et cartes compactes.
+- Accueil avec compteurs de critères et de catégories calculés depuis le formulaire, sans statistiques d’index ou d’utilisateurs inventées.
+- Mise en page de recherche à deux panneaux sur ordinateur, empilés sur mobile.
+- Boutons de catégorie pour isoler un groupe de critères ; le bouton « Tous » rétablit la vue complète.
+- Recherche de critères avec le raccourci `/`, compteurs par catégorie et pastilles pour retirer les valeurs saisies. `Échap` efface le filtre de critères ; `Entrée` dans un champ lance la recherche.
+- Fiches de résultats avec initiales, icônes et informations hiérarchisées, affichage liste/grille et filtre local sur les résultats déjà reçus.
+- Contenu visible immédiatement, transitions de survol discrètes ; la préférence système de réduction des animations est respectée.
+- `css/interface.css` regroupe la nouvelle présentation commune. `js/interface.js` gère les interactions locales ; `js/app.js` conserve la recherche, les comptes, les crédits et l’administration.
+- Les huit fichiers `index.html` partagent la même structure : répercuter les changements de balisage sur chaque route.
+
+Pour prévisualiser depuis la racine : `python3 -m http.server 8000`, puis ouvrir `http://localhost:8000/`. Aucun build ni installation de dépendances n’est nécessaire.
+
 ## Configuration
 
 1. Dans `js/config.js`, renseigne :
@@ -54,10 +77,6 @@ Dans la console administrateur, la section BAVUR & BLOCUS permet désormais de s
 Exécute entièrement `supabase_admin_media_fix.sql` dans Supabase > SQL Editor. La migration recharge automatiquement le cache de schéma PostgREST à la fin.
 
 
-### Recherche endpoint — correctif v8
-La recherche passe par `/api/search` côté Vercel pour éviter les problèmes CORS du navigateur et afficher les erreurs réelles de la source. Le crédit n'est réservé qu'après une réponse valide. Tu peux définir `NEXUS_SEARCH_ENDPOINT` dans les variables d'environnement Vercel ; sinon la valeur de `js/config.js` est utilisée.
-
-
 ## V11 — recherche legacy conservée
 - La recherche utilise directement `NEXUS_CONFIG.endpoint`, comme la version legacy qui fonctionnait.
 - Aucun proxy `/api/search` n'est utilisé.
@@ -70,7 +89,7 @@ La recherche passe par `/api/search` côté Vercel pour éviter les problèmes C
 - Les comptes utilisateurs reçoivent 5 crédits par jour.
 - Le renouvellement se fait automatiquement à minuit (Europe/Paris), avec un reset côté serveur.
 - Le bouton « Crédits » dans la barre du haut ouvre une fenêtre indiquant le solde et le temps restant avant le prochain renouvellement.
-- Pour activer les crédits quotidiens sur un projet Supabase existant, exécuter `supabase_daily_credits.sql` une fois dans le SQL Editor.
+- Le renouvellement quotidien nécessite le RPC `nexus_get_credit_status` côté Supabase. La migration quotidienne n’est pas incluse dans ce dépôt ; sans ce RPC, le site utilise le solde du profil sans promettre un renouvellement automatique.
 - Les administrateurs gardent des crédits illimités.
 
 

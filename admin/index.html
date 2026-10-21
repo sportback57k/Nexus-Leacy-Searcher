@@ -3,10 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#090711">
+  <meta name="theme-color" content="#080810">
   <meta name="description" content="NEXUS, une interface de recherche de démonstration avec des données fictives.">
   <title>NEXUS — Searcher</title>
-  <link rel="stylesheet" href="/css/style.css?v=nexus-violet-43">
+  <link rel="icon" type="image/png" href="/assets/nexus-logo.png">
+  <link rel="stylesheet" href="/css/style.css?v=nexus-violet-46">
+  <link rel="stylesheet" href="/css/interface.css?v=nexus-violet-46">
 </head>
 <body>
   <div class="rain-background" aria-hidden="true">
@@ -44,18 +46,21 @@
     <section id="home" class="page home-page" aria-labelledby="home-title">
       <div class="hero nexus-landing-hero">
         <div class="hero-copy">
-          <span class="eyebrow"><i aria-hidden="true"></i> NEXUS SEARCHER</span>
-          <h1 id="home-title">NEXUS Searcher<br><em>reste accessible.</em></h1>
-          <p>Une interface claire pour retrouver rapidement les informations disponibles et parcourir les vidéos de la communauté.</p>
-          <button type="button" class="primary" data-page="search">Lancer une recherche <span aria-hidden="true">→</span></button>
+          <img class="hero-brand-logo nexus-logo" src="/assets/nexus-logo.png" alt="NEXUS" width="112" height="112" fetchpriority="high">
+          <span class="eyebrow"><i aria-hidden="true"></i> LA RECHERCHE, SIMPLEMENT.</span>
+          <h1 id="home-title">Croise les indices.<br><em>Retrouve l’essentiel.</em></h1>
+          <p>Identité, contact, localisation : réunis tes critères dans un seul espace et explore des résultats qui vont droit au but.</p>
+          <div class="hero-actions"><button type="button" class="primary" data-page="search">Ouvrir le moteur <span aria-hidden="true">↗</span></button><button type="button" class="secondary-button" data-page="account">Mon espace <span aria-hidden="true">→</span></button></div>
+          <div class="hero-capabilities"><span><i aria-hidden="true"></i> Recherche multicritère</span><span><i aria-hidden="true"></i> Fiches structurées</span><span><i aria-hidden="true"></i> Communauté NEXUS</span></div>
         </div>
-        <div class="hero-art nexus-logo-hero" aria-hidden="true">
-          <div class="logo-ring logo-ring-one"></div>
-          <div class="logo-ring logo-ring-two"></div>
-          <div class="logo-ring logo-ring-three"></div>
-          <div class="art-core"><img src="/assets/nexus-logo.png" alt=""></div>
+        <div class="engine-preview" aria-label="Aperçu de l’interface de recherche">
+          <div class="preview-topline"><span class="preview-brand"><img class="preview-symbol nexus-logo" src="/assets/nexus-logo.png" alt="" width="32" height="32"> NEXUS <small>/ moteur de recherche</small></span><span class="preview-label">APERÇU DE L’INTERFACE</span></div>
+          <div class="preview-query"><span class="preview-search-icon" aria-hidden="true">⌕</span><span>Une recherche. Plusieurs possibilités.</span><button type="button" data-page="search" aria-label="Accéder à la recherche">↗</button></div>
+          <div class="preview-tiles"><button type="button" data-page="search"><span class="preview-tile-icon" aria-hidden="true">◎</span><span>Identité<small>Nom, prénom, naissance</small></span><span aria-hidden="true">↗</span></button><button type="button" data-page="search"><span class="preview-tile-icon" aria-hidden="true">@</span><span>Contact<small>E-mail, téléphone, pseudo</small></span><span aria-hidden="true">↗</span></button><button type="button" data-page="search"><span class="preview-tile-icon" aria-hidden="true">⌖</span><span>Localisation<small>Ville, adresse, code postal</small></span><span aria-hidden="true">↗</span></button></div>
+          <div class="preview-bottomline"><span><i aria-hidden="true"></i> Combine les champs à ton rythme</span><span>01 — EXPLORATION</span></div>
         </div>
       </div>
+      <div class="platform-facts" aria-label="Le moteur en un coup d’œil"><div><strong data-criterion-total>—</strong><span>critères disponibles</span></div><div><strong data-category-total>6</strong><span>catégories de recherche</span></div><div><strong>2</strong><span>vues pour tes résultats</span></div></div>
       <section class="featured-section" aria-labelledby="featured-title">
         <div class="section-heading featured-heading">
           <div><span class="eyebrow">AVANT-PREMIÈRE</span><h2 id="featured-title">Les dernières <em>vidéos.</em></h2><p>Les vidéos validées par l’administration apparaissent ici automatiquement.</p></div>
@@ -65,15 +70,15 @@
       <div class="feature-row">
         <article class="feature">
           <span class="feature-icon" aria-hidden="true">⌕</span>
-          <div><h2>Recherche flexible</h2><p>Combine plusieurs critères en quelques secondes.</p></div>
+          <div><h2>Chaque champ compte.</h2><p>Identité, contact ou localisation : compose une recherche adaptée.</p></div>
         </article>
         <article class="feature">
           <span class="feature-icon" aria-hidden="true">◈</span>
-          <div><h2>Résultats lisibles</h2><p>Retrouve les informations dans une présentation claire.</p></div>
+          <div><h2>Une fiche. Une vue claire.</h2><p>Parcours les résultats, filtre les fiches et copie les informations.</p></div>
         </article>
         <article class="feature">
           <span class="feature-icon" aria-hidden="true">✓</span>
-          <div><h2>Données de démonstration</h2><p>Teste l’interface sans utiliser de données réelles.</p></div>
+          <div><h2>Explore à ton rythme.</h2><p>Une interface de démonstration à découvrir avec des données fictives.</p></div>
         </article>
       </div>
       <section class="review-section" aria-labelledby="reviews-title">
@@ -101,17 +106,31 @@
       </section>
     </section>
 
-    <section id="search" class="page search-page active" aria-labelledby="search-title">
+    <section id="search" class="page search-page active" aria-labelledby="workspace-title">
+      <div class="search-intro">
+        <div><div class="workspace-breadcrumb">NEXUS <span>/</span> Espace de recherche</div>
+          <span class="eyebrow">LE MOTEUR NEXUS</span>
+          <h1 id="workspace-title">La recherche,<br><em>dans les détails.</em></h1>
+          <p>Croise les critères et parcours les fiches depuis un même espace.</p>
+        </div>
+        <div class="workspace-note"><img class="workspace-note-icon nexus-logo" src="/assets/nexus-logo.png" alt="" width="44" height="44"><div><span>UN ESPACE, TOUS TES CRITÈRES</span><strong>Précise. Combine. Explore.</strong><p>Commence avec un champ, affine à ton rythme.</p></div></div>
+      </div>
+      <div class="workspace-steps" aria-label="Étapes de recherche"><span><b>01</b> Définir les critères</span><i aria-hidden="true"></i><span><b>02</b> Lancer la recherche</span><i aria-hidden="true"></i><span><b>03</b> Explorer les résultats</span></div>
+
       <div class="layout">
         <aside class="card filters" aria-label="Critères de recherche">
           <div class="filters-heading">
             <div>
-              <h1 id="search-title">Critères de recherche</h1>
-              <p>Remplissez un ou plusieurs champs, puis lancez la recherche.</p>
+              <span class="card-kicker">01 / LA REQUÊTE</span><h2 id="search-title">Tes critères</h2>
+              <p>Quelques informations suffisent pour commencer.</p>
             </div>
             <span id="selected" class="selected-count" aria-live="polite">0 critère</span>
           </div>
+          <div id="criterionTabs" class="criterion-tabs" role="group" aria-label="Catégories de critères"></div>
+          <label class="criterion-finder"><span class="finder-icon" aria-hidden="true">⌕</span><input id="criterionFinder" type="search" placeholder="Trouver un critère…" aria-label="Trouver un critère de recherche" autocomplete="off"><kbd aria-hidden="true">/</kbd></label>
+          <p id="noCriteria" class="no-criteria" role="status" hidden>Aucun critère ne correspond.</p>
           <div id="fields"></div>
+          <div id="activeFilters" class="active-filters" aria-label="Critères actifs" hidden></div>
           <div class="filter-footer">
             <span class="filter-count" aria-live="polite">0 critère actif</span>
             <div class="filter-actions">
@@ -123,13 +142,20 @@
 
         <section class="card results" aria-labelledby="results-title">
           <div class="card-heading results-heading">
-            <div><span class="card-kicker">EXPLORATION</span><h2 id="results-title">Aperçu des résultats</h2></div>
+            <div><span class="card-kicker">02 / LES CORRESPONDANCES</span><h2 id="results-title">Résultats<span class="heading-dot">.</span></h2></div>
             <span id="count" class="result-count" aria-live="polite">0</span>
           </div>
+          <div id="resultTools" class="result-tools" hidden>
+            <label class="result-finder"><span aria-hidden="true">⌕</span><input id="resultFinder" type="search" placeholder="Filtrer les résultats reçus…" aria-label="Filtrer les résultats reçus"></label>
+            <div class="view-switch" role="group" aria-label="Affichage des résultats"><button type="button" data-result-view="list" aria-pressed="true" aria-label="Vue liste" title="Vue liste">☰</button><button type="button" data-result-view="grid" aria-pressed="false" aria-label="Vue grille" title="Vue grille">▦</button></div>
+          </div>
+          <p id="resultSummary" class="result-summary" role="status" hidden></p>
           <div id="state" class="state" aria-live="polite">
-            <strong aria-hidden="true">⌕</strong>
-            <b>Aucune recherche</b>
-            <span>Lance une recherche pour afficher les résultats.</span>
+            <div class="empty-illustration" aria-hidden="true"><span class="empty-line"></span><span class="empty-line"></span><span class="empty-line"></span><strong>⌕</strong></div>
+            <span class="card-kicker">TOUT COMMENCE PAR UN CRITÈRE</span>
+            <b>À toi d’explorer.</b>
+            <span>Ajoute tes critères à gauche, puis lance une recherche. Les résultats prendront place ici.</span>
+            <div class="empty-tags" aria-hidden="true"><span>Identité</span><span>Contact</span><span>Localisation</span></div>
           </div>
           <div id="output" aria-live="polite"></div>
         </section>
@@ -149,6 +175,7 @@
 
     <section id="bavur" class="page category-page" aria-labelledby="bavur-title">
       <div class="section-heading">
+        <img class="section-logo nexus-logo" src="/assets/nexus-logo.png" alt="" width="56" height="56">
         <div><span class="eyebrow">VIDÉOS COMMUNAUTAIRES</span><h1 id="bavur-title"><em>BAVUR</em></h1>
           <p>Envoie une vidéo MP4 ou MOV. Elle sera visible après validation par l’administrateur.</p></div>
       </div>
@@ -165,6 +192,7 @@
 
     <section id="blocus" class="page category-page" aria-labelledby="blocus-title">
       <div class="section-heading">
+        <img class="section-logo nexus-logo" src="/assets/nexus-logo.png" alt="" width="56" height="56">
         <div><span class="eyebrow">VIDÉOS COMMUNAUTAIRES</span><h1 id="blocus-title"><em>BLOCUS</em></h1>
           <p>Envoie une vidéo MP4 ou MOV. Elle sera visible après validation par l’administrateur.</p></div>
       </div>
@@ -181,6 +209,7 @@
 
     <section id="account" class="page account-page" aria-labelledby="account-title">
       <div class="section-heading">
+        <img class="section-logo nexus-logo" src="/assets/nexus-logo.png" alt="" width="56" height="56">
         <div>
           <span class="eyebrow">ESPACE MEMBRE</span>
           <h1 id="account-title">Compte <em>NEXUS</em></h1>
@@ -223,6 +252,7 @@
 
     <section id="admin" class="page admin-page" aria-labelledby="admin-title">
       <div class="section-heading">
+        <img class="section-logo nexus-logo" src="/assets/nexus-logo.png" alt="" width="56" height="56">
         <div>
           <span class="eyebrow">ACCÈS RESTREINT</span>
           <h1 id="admin-title">Console <em>admin</em></h1>
@@ -249,28 +279,6 @@
               <button type="button" class="secondary-button" id="reopenSiteBtn">Rouvrir le site</button>
             </div>
           </form>
-        </section>
-
-        <section class="card admin-card admin-theme-card" aria-labelledby="theme-admin-title">
-          <div class="card-heading"><div><span class="card-kicker">APPARENCE GLOBALE</span><h2 id="theme-admin-title">Couleur du site</h2></div><span class="admin-status-dot">GLOBAL</span></div>
-          <p class="card-description">Choisis la couleur principale de NEXUS. Le thème sera enregistré dans Supabase et appliqué automatiquement à tous les visiteurs.</p>
-          <form id="siteThemeForm" class="theme-admin-form">
-            <div class="theme-presets" id="themePresets" role="group" aria-label="Thèmes prédéfinis">
-              <button type="button" class="theme-swatch" data-theme-preset="violet" style="--swatch:#9b5cff" aria-label="Violet"><span></span>Violet</button>
-              <button type="button" class="theme-swatch" data-theme-preset="blue" style="--swatch:#3d8bff" aria-label="Bleu"><span></span>Bleu</button>
-              <button type="button" class="theme-swatch" data-theme-preset="green" style="--swatch:#20c77a" aria-label="Vert"><span></span>Vert</button>
-              <button type="button" class="theme-swatch" data-theme-preset="orange" style="--swatch:#ff8a30" aria-label="Orange"><span></span>Orange</button>
-              <button type="button" class="theme-swatch" data-theme-preset="pink" style="--swatch:#ff4fa3" aria-label="Rose"><span></span>Rose</button>
-            </div>
-            <div class="theme-custom-row">
-              <label class="auth-field">Couleur personnalisée
-                <input id="siteThemeColor" name="color" type="color" value="#9b5cff" aria-label="Choisir une couleur">
-              </label>
-              <div class="theme-preview" id="themePreview"><span class="theme-preview-dot"></span><div><strong>Thème actuel</strong><small id="themePreviewText">Rouge · #FF3038</small></div></div>
-              <button type="submit" class="primary" id="saveSiteTheme">Appliquer à tout le monde</button>
-            </div>
-          </form>
-          <p class="theme-admin-note">💡 Le changement est global : pas besoin de modifier chaque page ou de redéployer Vercel.</p>
         </section>
 
         <section class="card admin-card admin-credits-card" aria-labelledby="credits-admin-title">
@@ -328,9 +336,10 @@
     </div>
   </div>
 
-  <footer><span class="footer-mark">N</span> Searcher by !303 error ✘ sportback57</footer>
+  <footer><img class="footer-mark nexus-logo" src="/assets/nexus-logo.png" alt="NEXUS" width="32" height="32"> Searcher by !303 error ✘ sportback57</footer>
   <script defer src="/js/config.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="/js/app.js?v=nexus-violet-43"></script>
+  <script defer src="/js/app.js?v=nexus-violet-46"></script>
+  <script defer src="/js/interface.js?v=nexus-violet-46"></script>
 </body>
 </html>
