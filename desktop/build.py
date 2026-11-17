@@ -71,22 +71,6 @@ def main():
  (staging/'Applications').symlink_to('/Applications',target_is_directory=True)
  bgimage=BUILD/'Nexus-Installer.png'
  run('xcrun','swift',ROOT/'dmg-background.swift',bgimage,quiet=True)
- (staging/'Installer Nexus Legacy.txt').write_text('''NEXUS LEGACY — INSTALLATION
-
-1. Glisse « Nexus Legacy » dans « Applications ».
-2. Ouvre Nexus Legacy depuis Applications ou Spotlight.
-3. Connecte-toi avec ton adresse e-mail et le code reçu.
-
-Version 1.0.0 — Mac Intel, macOS Monterey 12 ou ultérieur.
-Une connexion Internet est nécessaire. L’application charge le site en ligne :
-les comptes, crédits et fonctions admin sont ceux de nexussearcher.vercel.app.
-
-Cette version personnelle dispose d’une signature locale. Elle n’est pas
-notarisée par Apple. Si macOS bloque une copie transférée depuis Internet,
-utilise clic droit → Ouvrir, ou l’option Ouvrir quand même dans
-Préférences Système → Sécurité et confidentialité → Général.
-Ne désactive pas les protections de macOS.
-''')
  dmg=DIST/f'Nexus-Legacy-{VERSION}-macOS-Intel.dmg'
  print('Préparation de la fenêtre d’installation…',flush=True)
  working=BUILD/'Nexus-Legacy-layout.dmg'
@@ -130,6 +114,7 @@ Ne désactive pas les protections de macOS.
  digest=hashlib.sha256(dmg.read_bytes()).hexdigest()
  dmg.with_suffix('.dmg.sha256').write_text(digest+'  '+dmg.name+'\n')
  desktop=Path.home()/'Desktop'/dmg.name;shutil.copy2(dmg,desktop)
+ desktop.with_suffix('.dmg.sha256').write_text(digest+'  '+dmg.name+'\n')
  working.unlink()
  print('DMG vérifié : '+str(desktop),flush=True)
  print('Application : '+str(app),flush=True)
