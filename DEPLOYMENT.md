@@ -21,3 +21,11 @@ Les tests de recherche, de code e-mail et d’intégration PostgreSQL sont pass�
 L’annonce s’affiche grâce à `nexus_site_settings.accounts_reset_at` et sa fermeture est mémorisée par navigateur. Les nouvelles inscriptions restent ouvertes.
 
 Ne pas relancer `supabase_reset_members_once.sql` : c’est une opération exceptionnelle qui supprimerait les nouveaux membres. Le script refuse une seconde exécution après la date de réinitialisation enregistrée.
+
+## V48 — sanctions et activité administrateur
+
+`supabase_account_moderation.sql` est appliqué. Les sanctions modifient le bannissement Supabase Auth et révoquent les sessions dans la même transaction. Les opérations du compte vérifient aussi la session réelle, le statut de suspension et les règles RLS. Les administrateurs sont protégés.
+
+Les tests sur un compte temporaire du projet ont confirmé le blocage du mot de passe, de la validation OTP, du renouvellement de session et des crédits avec un ancien JWT. La réactivation autorise une nouvelle connexion et conserve le solde. Le compte de test et ses données ont été supprimés ; aucun membre réel n’a été sanctionné.
+
+L’interface propose les suspensions de 1 heure, 24 heures, 7 jours et 30 jours, le bannissement permanent et la réactivation. « Voir l’activité » utilise une fonction réservée aux administrateurs et affiche les recherches conservées, les vidéos et l’historique des sanctions. Tests PostgreSQL et navigateur réussis, y compris les états vides, les erreurs, le texte non interprété et le rendu mobile.

@@ -472,3 +472,16 @@ body { background: radial-gradient(ellipse at 50% -10%, #ffffff0e, transparent 5
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Account moderation and administrator activity */
+.user-row-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.user-row-info { min-width:0; }
+.user-row-info small { white-space:normal; overflow-wrap:anywhere; }
+.activity-item { padding:20px 0; border-bottom:1px solid #ffffff20; }
+.activity-heading { display:flex; justify-content:space-between; align-items:baseline; gap:16px; }
+.activity-heading time { font-size:11px; color:#a3a3a3; }
+.activity-item p { white-space:pre-wrap; overflow-wrap:anywhere; color:#bbb; font-size:13px; line-height:1.7; }
+.moderation-dialog input,.moderation-dialog select,.moderation-dialog textarea { width:100%; padding:12px; border:1px solid #555; border-radius:5px; background:#080808; color:#eee; font:inherit; }
+.moderation-dialog .auth-field { display:block; margin:18px 0; }
+.moderation-dialog .auth-field select,.moderation-dialog .auth-field textarea { display:block; margin-top:8px; }
+@media(max-width:620px){ .user-row { flex-wrap:wrap; gap:14px; } .user-row-actions { justify-content:flex-start; width:100%; } .activity-heading { flex-direction:column; gap:6px; } }

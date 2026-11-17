@@ -79,3 +79,19 @@ python3 tests/verify_auth.py
 Ces tests vérifient les interactions de recherche, l’absence de débit en cas d’erreur de source, les états de session, les formulaires, les codes e-mail et l’adaptation des soldes. Les réglages SMTP, la suppression des vrais comptes et les règles du projet doivent aussi être vérifiés sur Supabase avant mise en ligne.
 
 Test d’intégration facultatif dans une base locale jetable (dépendances `pgserver` et `psycopg2-binary`) : `python3 tests/verify_database.py`. Ce test couvre aussi les débits concurrents, les permissions, les changements d’heure et la conservation des administrateurs pendant la réinitialisation.
+
+## V48 — modération des comptes et activité
+
+Appliquer `supabase_account_moderation.sql` **après** `supabase_credit_auth_fix.sql`. Ne pas réappliquer les anciens scripts après cette migration : ils remplaceraient les contrôles d’accès plus récents.
+
+Dans Administration → Utilisateurs, **Gérer l’accès** propose :
+
+- une suspension de 1 heure, 24 heures, 7 jours ou 30 jours, avec motif obligatoire ;
+- un bannissement permanent, jusqu’à réactivation par un administrateur ;
+- la réactivation du compte, qui exige une nouvelle connexion.
+
+Les administrateurs sont protégés contre ces sanctions. Les opérations sont contrôlées côté serveur, enregistrées dans un journal privé et atomiques avec la révocation des sessions et la mise à jour du bannissement Supabase Auth. Les crédits, la recherche, les données du compte et les écritures vidéo restent bloqués même avec un ancien JWT signé. Se déconnecter ou changer de navigateur ne lève pas la sanction. Une suspension expire automatiquement ; les comptes restent soumis aux règles normales de connexion.
+
+**Voir l’activité** charge les recherches enregistrées, les vidéos et les sanctions via une fonction réservée aux administrateurs. Les entrées sont datées, triées et affichées comme du texte ; les états de chargement, de liste vide et d’erreur sont pris en charge. Les anciennes recherches déjà supprimées par la politique historique de conservation ne sont pas recréées.
+
+Vérifications supplémentaires : `python3 tests/verify_moderation.py` (PostgreSQL jetable) et `python3 tests/verify_admin_browser.py` (Playwright, avec `python3 -m http.server 8000` lancé à la racine). Ces tests ne sanctionnent aucun vrai membre.

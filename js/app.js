@@ -417,26 +417,15 @@ function supabaseReady(){
  return client;
 }
 async function getProfileForUser(authUser){
- const client=supabaseReady();
- // Le RPC gère le reset quotidien. Si la migration n'a pas encore été
- // exécutée, on retombe proprement sur la ligne du profil afin que le site
- // reste utilisable au lieu de bloquer toute l'interface.
- try{
-  const {data,error}=await client.rpc("nexus_get_credit_status");
-  if(!error){
-   const profile=Array.isArray(data)?data[0]:data;
-   if(profile)return {...profile,credits:Number(profile.credits),credits_reset_at:profile.credits_reset_at||profile.next_reset_at,unlimited_credits:Boolean(profile.is_admin)};
-  }
- }catch(error){
-  console.warn("RPC crédits indisponible, lecture directe du profil :",error?.message||error);
- }
- const {data,error}=await client.from("nexus_profiles")
-  .select("id,username,is_admin,credits,created_at")
-  .eq("id",authUser.id).maybeSingle();
+ const {data,error}=await supabaseReady().rpc("nexus_get_credit_status");
+ // A denied RPC must never fall back to reading an unrestricted profile.
  if(error)throw new Error(error.message);
- if(!data)throw new Error("Profil du compte introuvable.");
- return {...data,unlimited_credits:Boolean(data.is_admin)};
+ const profile=Array.isArray(data)?data[0]:data;
+ if(!profile)throw new Error("Profil du compte introuvable.");
+ if(profile.id!==authUser.id)throw new Error("Session expirée ou révoquée. Reconnecte-toi.");
+ return {...profile,credits:Number(profile.credits),credits_reset_at:profile.credits_reset_at||profile.next_reset_at,unlimited_credits:Boolean(profile.is_admin)};
 }
+
 async function authRequest(path, body){
  const client=supabaseReady();
  if(path==="/api/register"||path==="/api/login"){
@@ -446,6 +435,7 @@ async function authRequest(path, body){
    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email))throw new Error("Adresse e-mail invalide.");
    if(signup&&!/^[A-Za-z0-9_.-]{3,32}$/.test(username))throw new Error("Le pseudo doit faire 3 à 32 caractères (lettres, chiffres, ., _ ou -).");
    const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:signup,...(signup?{data:{username}}:{})}});
+   if(error?.code==="user_banned")throw new Error("Ce compte est banni ou temporairement suspendu.");
    if(error)throw new Error(error.status===429?"Trop de demandes. Patiente avant de demander un nouveau code.":error.message);
    return {email,username,signup};
  }
@@ -454,6 +444,7 @@ async function authRequest(path, body){
    const token=String(body.token||"").trim();
    if(!/^[0-9]{6,8}$/.test(token))throw new Error("Saisis le code reçu par e-mail (6 à 8 chiffres).");
    const {data,error}=await client.auth.verifyOtp({email,token,type:"email"});
+   if(error?.code==="user_banned")throw new Error("Ce compte est banni ou temporairement suspendu.");
    if(error||!data.user||!data.session)throw new Error("Code invalide ou expiré. Vérifie le code ou demandes-en un nouveau.");
    return {user:await getProfileForUser(data.user)};
  }
@@ -537,6 +528,12 @@ $("#searchBtn").addEventListener("click",async()=>{
  try{
   showState("Recherche…","Interrogation de la source configurée. Cela peut prendre quelques secondes.");
   const client=supabaseReady();
+  // Revalidate access before contacting the source, even if this tab has a cached profile.
+  const {data:access,error:accessError}=await searchRpc(client,"nexus_get_credit_status",{});
+  if(accessError)throw Error(accessError.message);
+  const allowed=Array.isArray(access)?access[0]:access;
+  if(!allowed||allowed.id!==user.id||currentUser?.id!==user.id)throw Error("Session expirée ou révoquée. Reconnecte-toi.");
+  if(!allowed.is_admin&&Number(allowed.credits)<1)throw Error("Crédits insuffisants.");
   const {response,raw}=await fetchWithTimeout(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(criteria)});
   let body;
   try{body=JSON.parse(raw)}catch{throw Error(`La source a renvoyé une réponse illisible (HTTP ${response.status}).`)}
@@ -955,22 +952,69 @@ document.querySelectorAll(".upload-form").forEach(form=>form.addEventListener("s
 
 $("#refreshVideos").addEventListener("click",loadPendingVideos);
 
+function moderationLabel(user){
+ if(user.is_banned)return "BANNI";
+ if(user.suspended_until&&Date.parse(user.suspended_until)>Date.now())return `Suspendu jusqu’au ${new Date(user.suspended_until).toLocaleString("fr-FR")}`;
+ return "Actif";
+}
 function appendUserRow(user){
  const row=document.createElement("article");row.className="user-row";
  const info=document.createElement("div");info.className="user-row-info";
  const username=document.createElement("strong");username.textContent=user.username;
  const created=document.createElement("small");
- created.textContent=`${user.is_admin?"Crédits illimités":`${user.credits} crédit${user.credits===1?"":"s"}`} · Inscription : ${new Date(user.created_at).toLocaleString("fr-FR")}`;
+ created.textContent=`${user.is_admin?"ADMIN · Crédits illimités":`${user.credits} crédits · ${moderationLabel(user)}`} · Inscription : ${new Date(user.created_at).toLocaleString("fr-FR")}`;
  info.append(username,created);
+ if(user.moderation_reason){const reason=document.createElement("small");reason.textContent=`Motif : ${user.moderation_reason}`;info.appendChild(reason)}
+ const actions=document.createElement("div");actions.className="user-row-actions";
  const view=document.createElement("button");view.type="button";view.className="secondary-button";view.textContent="Voir l’activité";
- view.addEventListener("click",()=>openUserActivity(user));
- row.append(info,view);$("#usersList").appendChild(row);
+ view.addEventListener("click",()=>openUserActivity(user));actions.appendChild(view);
+ if(!user.is_admin){
+  const moderate=document.createElement("button");moderate.type="button";moderate.className="secondary-button";moderate.textContent="Gérer l’accès";
+  moderate.addEventListener("click",()=>openModerationDialog(user));actions.appendChild(moderate);
+ }
+ row.append(info,actions);$("#usersList").appendChild(row);
 }
+let moderationTarget=null;
+function openModerationDialog(user){
+ moderationTarget=user;
+ const form=$("#moderationForm");form.reset();
+ $("#moderationUsername").textContent=user.username;
+ $("#moderationCurrentState").textContent=moderationLabel(user);
+ $("#moderationFeedback").textContent="";
+ form.elements.action.value=user.is_banned||Date.parse(user.suspended_until||"")>Date.now()?"restore":"suspend";
+ updateModerationFields();$("#moderationDialog").showModal();
+}
+function updateModerationFields(){
+ const form=$("#moderationForm"),action=form.elements.action.value;
+ $("#moderationDurationField").hidden=action!=="suspend";
+ form.elements.reason.required=action!=="restore";
+ $("#moderationSubmit").textContent=action==="ban"?"Bannir ce compte":action==="restore"?"Réactiver ce compte":"Suspendre ce compte";
+}
+$("#moderationForm").elements.action.addEventListener("change",updateModerationFields);
+$("#closeModerationDialog").addEventListener("click",()=>$("#moderationDialog").close());
+$("#moderationForm").addEventListener("submit",async event=>{
+ event.preventDefault();
+ const form=event.currentTarget,button=$("#moderationSubmit");
+ if(!moderationTarget||button.disabled||!form.reportValidity())return;
+ button.disabled=true;setNotice($("#moderationFeedback"),"Enregistrement…");
+ const target={...moderationTarget};
+ try{
+  const {data,error}=await supabaseReady().rpc("nexus_admin_moderate_user",{
+   p_user_id:target.id,p_action:form.elements.action.value,
+   p_duration_hours:form.elements.action.value==="suspend"?Number(form.elements.duration.value):null,
+   p_reason:form.elements.reason.value.trim()
+  });
+  if(error)throw new Error(error.message);
+  $("#moderationDialog").close();await loadAdminUsers();
+  setNotice(adminNotice,`${target.username} : ${data?.action==="restore"?"compte réactivé":data?.action==="ban"?"compte banni":"compte suspendu"}.`,"success");
+ }catch(error){setNotice($("#moderationFeedback"),error.message,"error")}
+ finally{button.disabled=false}
+});
 
 async function loadAdminUsers(reset=true){
  if(!currentUser?.is_admin)return;
  try{
-  const {data,error}=await supabaseReady().from("nexus_profiles").select("id,username,is_admin,credits,created_at").order("username",{ascending:true});
+  const {data,error}=await supabaseReady().from("nexus_profiles").select("id,username,is_admin,credits,created_at,is_banned,suspended_until,moderation_reason").order("username",{ascending:true});
   if(error)throw new Error(error.message);
   const users=data||[];
   const select=$("#creditUserSelect");
@@ -1007,25 +1051,40 @@ $("#setCreditsForm").addEventListener("submit",async event=>{
  }catch(error){setNotice(adminNotice,`Modification impossible : ${error.message}`,"error")}
 });
 
+function appendActivity(title,description,createdAt){
+ const item=document.createElement("article");item.className="activity-item";
+ const header=document.createElement("div");header.className="activity-heading";
+ const heading=document.createElement("strong");heading.textContent=title;
+ const time=document.createElement("time");
+ const date=new Date(createdAt);time.textContent=Number.isNaN(date.getTime())?"Date indisponible":date.toLocaleString("fr-FR");
+ if(!Number.isNaN(date.getTime()))time.dateTime=date.toISOString();
+ const text=document.createElement("p");text.textContent=description;
+ header.append(heading,time);item.append(header,text);$("#userLogs").appendChild(item);
+}
 async function openUserActivity(user){
  selectedAdminUser=user;
  $("#userLogsTitle").textContent=`Activité — ${user.username}`;
  $("#adminUserList").hidden=true;$("#userLogsPanel").hidden=false;$("#userLogs").replaceChildren();
+ $("#userLogs").setAttribute("aria-busy","true");
+ const loading=document.createElement("p");loading.textContent="Chargement de l’activité…";$("#userLogs").appendChild(loading);
  try{
-  const client=supabaseReady();
-  const [{data:searches,error:searchError},{data:videos,error:videoError}]=await Promise.all([
-   client.from("nexus_search_logs").select("criteria,criteria_count,result_count,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(100),
-   client.from("nexus_videos").select("category,status,title,description,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(100)
-  ]);
-  if(searchError)throw new Error(searchError.message);
-  if(videoError)throw new Error(videoError.message);
-  (searches||[]).forEach(item=>{
+  const {data,error}=await supabaseReady().rpc("nexus_admin_get_activity",{p_user_id:user.id});
+  if(error)throw new Error(error.message);
+  if(selectedAdminUser?.id!==user.id)return;
+  $("#userLogs").replaceChildren();
+  const events=[];
+  (data?.searches||[]).forEach(item=>{
    const criteria=item.criteria&&typeof item.criteria==="object"?Object.entries(item.criteria).map(([key,value])=>`${fieldLabels[key]||key} = ${String(value)}`).join("\n"):"Critères non disponibles";
-   appendActivity("Recherche",`${criteria}\n\n${item.criteria_count} critère(s) · ${item.result_count??"—"} résultat(s)`,item.created_at);
+   events.push({title:"Recherche",description:`${criteria}\n\n${item.criteria_count} critère(s) · ${item.result_count??"—"} résultat(s)`,created_at:item.created_at});
   });
-  (videos||[]).forEach(item=>appendActivity(`${item.category} · ${item.status}`,`${item.title}\n${item.description||""}`,item.created_at));
-  if(!(searches||[]).length&&!(videos||[]).length){const empty=document.createElement("p");empty.className="card-description";empty.textContent="Aucune activité enregistrée.";$("#userLogs").appendChild(empty)}
- }catch(error){setNotice(adminNotice,`Impossible de charger l’activité : ${error.message}`,"error")}
+  (data?.videos||[]).forEach(item=>events.push({title:`${item.category} · ${item.status}`,description:`${item.title}\n${item.description||""}`,created_at:item.created_at}));
+  (data?.moderation||[]).forEach(item=>events.push({title:({ban:"Bannissement",suspend:"Suspension temporaire",restore:"Réactivation"})[item.action]||"Modération",description:`${item.reason||"Aucun motif renseigné"}${item.suspended_until?`\nJusqu’au ${new Date(item.suspended_until).toLocaleString("fr-FR")}`:""}${item.actor?`\nPar ${item.actor}`:""}`,created_at:item.created_at}));
+  events.sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)).forEach(item=>appendActivity(item.title,item.description,item.created_at));
+  if(!events.length){const empty=document.createElement("p");empty.className="card-description";empty.textContent="Aucune activité enregistrée pour ce compte.";$("#userLogs").appendChild(empty)}
+ }catch(error){
+  if(selectedAdminUser?.id!==user.id)return;
+  $("#userLogs").replaceChildren();const notice=document.createElement("p");notice.className="account-notice";setNotice(notice,`Impossible de charger l’activité : ${error.message}`,"error");$("#userLogs").appendChild(notice);
+ }finally{if(selectedAdminUser?.id===user.id)$("#userLogs").setAttribute("aria-busy","false")}
 }
 
 $("#backToUsers").addEventListener("click",()=>{
@@ -1084,3 +1143,23 @@ async function initialize(){
 updateFilters();
 initialize();
 page(currentRoutePage());
+
+let accessCheckPending=false;
+async function checkAccountAccess(){
+ if(!currentUser||accessCheckPending||document.hidden)return;
+ accessCheckPending=true;const uid=currentUser.id;
+ try{
+  const profile=await getProfileForUser({id:uid});
+  if(currentUser?.id===uid){currentUser=profile;updateCreditDisplays()}
+ }catch(error){
+  if(currentUser?.id!==uid)return;
+  // A transient network failure is not evidence of a revoked account.
+  if(/banni|suspendu|révoquée|expirée/i.test(error.message)){
+   currentUser=null;await getSupabase().auth.signOut({scope:"local"});renderAccount();
+   setNotice(accountNotice,error.message,"error");showState("Accès au compte indisponible",error.message);
+   $("#adminDashboard").hidden=true;$("#adminGate").hidden=false;
+  }
+ }finally{accessCheckPending=false}
+}
+setInterval(checkAccountAccess,15000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkAccountAccess()});

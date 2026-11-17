@@ -7,8 +7,8 @@
   <meta name="description" content="NEXUS, une interface de recherche de démonstration avec des données fictives.">
   <title>NEXUS — Searcher</title>
   <link rel="icon" type="image/png" href="/assets/nexus-logo.png">
-  <link rel="stylesheet" href="/css/style.css?v=nexus-noir-47">
-  <link rel="stylesheet" href="/css/interface.css?v=nexus-noir-47">
+  <link rel="stylesheet" href="/css/style.css?v=nexus-noir-48">
+  <link rel="stylesheet" href="/css/interface.css?v=nexus-noir-48">
 </head>
 <body>
   <div class="rain-background" aria-hidden="true">
@@ -324,6 +324,21 @@
     </section>
   </main>
 
+  <dialog id="moderationDialog" class="reset-dialog moderation-dialog" aria-labelledby="moderationDialogTitle">
+    <button type="button" id="closeModerationDialog" class="secondary-button">Fermer</button>
+    <span class="card-kicker">GESTION DE L’ACCÈS</span>
+    <h2 id="moderationDialogTitle">Compte <span id="moderationUsername"></span></h2>
+    <p id="moderationCurrentState"></p>
+    <form id="moderationForm">
+      <label class="auth-field">Action<select name="action"><option value="suspend">Suspension temporaire</option><option value="ban">Bannissement permanent</option><option value="restore">Réactiver le compte</option></select></label>
+      <label class="auth-field" id="moderationDurationField">Durée<select name="duration"><option value="1">1 heure</option><option value="24" selected>24 heures</option><option value="168">7 jours</option><option value="720">30 jours</option></select></label>
+      <label class="auth-field">Motif<textarea name="reason" maxlength="500" rows="3" required></textarea></label>
+      <p id="moderationFeedback" class="account-notice" role="status"></p>
+      <button type="submit" class="primary" id="moderationSubmit">Suspendre ce compte</button>
+    </form>
+    <p class="reset-detail">La sanction bloque le compte sur tous ses appareils. Les sessions existantes sont révoquées. Une suspension expire automatiquement ; un bannissement doit être levé ici.</p>
+  </dialog>
+
   <dialog id="accountResetDialog" class="reset-dialog" aria-labelledby="resetDialogTitle" aria-describedby="resetDialogDescription">
     <span class="card-kicker">NEXUS / NOUVEAU DÉPART</span>
     <div class="reset-symbol" aria-hidden="true">↻</div>
@@ -358,7 +373,7 @@
   <footer><img class="footer-mark nexus-logo" src="/assets/nexus-logo.png" alt="NEXUS" width="32" height="32"> Searcher by !303 error ✘ sportback57</footer>
   <script defer src="/js/config.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
-  <script defer src="/js/app.js?v=nexus-noir-47"></script>
-  <script defer src="/js/interface.js?v=nexus-noir-47"></script>
+  <script defer src="/js/app.js?v=nexus-noir-48"></script>
+  <script defer src="/js/interface.js?v=nexus-noir-48"></script>
 </body>
 </html>
