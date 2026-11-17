@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080810">
+  <meta name="theme-color" content="#080808">
   <meta name="description" content="NEXUS, une interface de recherche de démonstration avec des données fictives.">
   <title>NEXUS — Searcher</title>
   <link rel="icon" type="image/png" href="/assets/nexus-logo.png">
-  <link rel="stylesheet" href="/css/style.css?v=nexus-violet-46">
-  <link rel="stylesheet" href="/css/interface.css?v=nexus-violet-46">
+  <link rel="stylesheet" href="/css/style.css?v=nexus-noir-47">
+  <link rel="stylesheet" href="/css/interface.css?v=nexus-noir-47">
 </head>
 <body>
   <div class="rain-background" aria-hidden="true">
@@ -213,7 +213,7 @@
         <div>
           <span class="eyebrow">ESPACE MEMBRE</span>
           <h1 id="account-title">Compte <em>NEXUS</em></h1>
-          <p>Chaque compte reçoit 5 crédits. Une recherche coûte 1 crédit.</p>
+          <p>5 crédits par jour, renouvelés à minuit (heure de Paris). Une recherche coûte 1 crédit.</p>
         </div>
       </div>
       <div id="accountNotice" class="account-notice" role="status">Comptes protégés par Supabase Auth.</div>
@@ -221,20 +221,29 @@
         <form id="signupForm" class="card auth-card">
           <span class="card-kicker">NOUVEAU MEMBRE</span>
           <h2>Créer un compte</h2>
-          <p class="auth-note">Chaque nouveau compte reçoit 5 crédits. Une adresse e-mail est utilisée pour sécuriser le compte.</p>
+          <p class="auth-note">Choisis ton pseudo et vérifie ton adresse avec un code reçu par e-mail. Aucun mot de passe à retenir.</p>
           <label class="auth-field">Adresse e-mail<input name="email" type="email" maxlength="254" autocomplete="email" required><small>Utilise une adresse e-mail valide.</small></label>
           <label class="auth-field">Nom d’utilisateur<input name="username" type="text" minlength="3" maxlength="32" pattern="[\-A-Za-z0-9_.]{3,32}" autocomplete="username" required><small>3 à 32 caractères : lettres, chiffres, points, tirets ou _</small></label>
-          <label class="auth-field">Mot de passe<input name="password" type="password" minlength="8" maxlength="256" autocomplete="new-password" required><small>8 caractères minimum</small></label>
-          <button class="primary auth-submit" type="submit">Créer mon compte</button>
+          <button class="primary auth-submit" type="submit">Recevoir mon code</button>
           <button type="button" class="secondary-button auth-switch" id="showLoginButton">Se connecter</button>
         </form>
         <form id="loginForm" class="card auth-card" hidden>
           <span class="card-kicker">DÉJÀ INSCRIT</span>
-          <h2>Connexion</h2>
+          <h2>Heureux de te revoir.</h2>
+          <p class="auth-note">Un code à usage unique sera envoyé à ton adresse e-mail.</p>
           <label class="auth-field">Adresse e-mail<input name="email" type="email" maxlength="254" autocomplete="email" required></label>
-          <label class="auth-field">Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
-          <button class="primary auth-submit" type="submit">Se connecter</button>
+          <button class="primary auth-submit" type="submit">Recevoir mon code</button>
           <button type="button" class="secondary-button auth-switch" id="showSignupButton">Créer un compte</button>
+        </form>
+        <form id="otpForm" class="card auth-card" hidden>
+          <span class="card-kicker">02 / VÉRIFICATION</span>
+          <h2>Vérifie ta boîte mail.</h2>
+          <p class="auth-note">Saisis le code envoyé à <strong id="otpEmail"></strong>. Ce code est personnel et à usage unique.</p>
+          <label class="auth-field">Code de vérification<input name="token" class="otp-input" type="text" inputmode="numeric" pattern="[0-9]{6,8}" minlength="6" maxlength="8" autocomplete="one-time-code" aria-describedby="otpHelp" required></label>
+          <small id="otpHelp">Code de 6 à 8 chiffres. S’il a expiré, demandes-en un nouveau.</small>
+          <button class="primary auth-submit" type="submit">Vérifier et me connecter</button>
+          <button class="secondary-button auth-switch" type="button" id="resendOtp">Renvoyer le code</button>
+          <button class="secondary-button auth-switch" type="button" id="changeOtpEmail">Modifier mon adresse</button>
         </form>
       </div>
       <section id="accountProfile" class="card account-profile" hidden>
@@ -263,7 +272,7 @@
       <div id="adminGate" class="card admin-gate">
         <span class="admin-lock" aria-hidden="true">⌑</span>
         <h2>Accès administrateur</h2>
-        <p id="adminGateDescription">Connecte-toi sur la page Connexion avec l’adresse e-mail du compte administrateur et son mot de passe.</p>
+        <p id="adminGateDescription">Connecte-toi sur la page Connexion avec l’adresse e-mail du compte administrateur et le code reçu par e-mail.</p>
         <button type="button" class="primary" data-page="account" id="adminLoginLink">Ouvrir la connexion</button>
       </div>
       <div id="adminDashboard" class="admin-dashboard" hidden>
@@ -315,6 +324,16 @@
     </section>
   </main>
 
+  <dialog id="accountResetDialog" class="reset-dialog" aria-labelledby="resetDialogTitle" aria-describedby="resetDialogDescription">
+    <span class="card-kicker">NEXUS / NOUVEAU DÉPART</span>
+    <div class="reset-symbol" aria-hidden="true">↻</div>
+    <h2 id="resetDialogTitle">Ton espace évolue.</h2>
+    <p id="resetDialogDescription">Les anciens profils utilisateurs ont été supprimés lors de la mise à jour. Recrée ton compte avec ton adresse e-mail pour retrouver l’accès au site.</p>
+    <p class="reset-detail">Les comptes administrateurs sont conservés. Ton nouveau compte reçoit 5 crédits par jour.</p>
+    <button type="button" class="primary" id="resetCreateAccount">Recréer mon compte <span aria-hidden="true">↗</span></button>
+    <button type="button" class="secondary-button" id="resetUnderstood" autofocus>J’ai compris</button>
+  </dialog>
+
   <div class="credit-modal" id="creditModal" hidden aria-hidden="true">
     <div class="credit-modal-card" role="dialog" aria-modal="true" aria-labelledby="creditModalTitle">
       <button type="button" class="credit-modal-close" id="closeCreditModal" aria-label="Fermer">×</button>
@@ -338,8 +357,8 @@
 
   <footer><img class="footer-mark nexus-logo" src="/assets/nexus-logo.png" alt="NEXUS" width="32" height="32"> Searcher by !303 error ✘ sportback57</footer>
   <script defer src="/js/config.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="/js/app.js?v=nexus-violet-46"></script>
-  <script defer src="/js/interface.js?v=nexus-violet-46"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
+  <script defer src="/js/app.js?v=nexus-noir-47"></script>
+  <script defer src="/js/interface.js?v=nexus-noir-47"></script>
 </body>
 </html>

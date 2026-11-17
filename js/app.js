@@ -146,6 +146,8 @@ function updateFilters(){
  window.NexusInterface?.updateFilters();
 }
 let creditCountdownTimer=null;
+let creditRefreshPending=false;
+let creditRetryAfter=0;
 function formatResetCountdown(resetAt){
  const target=Date.parse(resetAt||"");
  if(!Number.isFinite(target))return "—";
@@ -177,11 +179,14 @@ function startCreditCountdown(){
  if(creditCountdownTimer)clearInterval(creditCountdownTimer);
  creditCountdownTimer=setInterval(async()=>{
    if(!currentUser||currentUser.unlimited_credits)return updateCreditDisplays();
-   if(currentUser.credits_reset_at&&Date.parse(currentUser.credits_reset_at)<=Date.now()){
+   if(!creditRefreshPending&&Date.now()>=creditRetryAfter&&currentUser.credits_reset_at&&Date.parse(currentUser.credits_reset_at)<=Date.now()){
+     creditRefreshPending=true;
+     const userId=currentUser.id;
      try{
        const result=await api("/api/me");
-       currentUser=result.user;
+       if(currentUser?.id===userId)currentUser=result.user;
      }catch(error){console.warn("Impossible de renouveler les crédits :",error.message||error)}
+     finally{creditRefreshPending=false;creditRetryAfter=Date.now()+30000}
    }
    updateCreditDisplays();
  },1000);
@@ -420,7 +425,7 @@ async function getProfileForUser(authUser){
   const {data,error}=await client.rpc("nexus_get_credit_status");
   if(!error){
    const profile=Array.isArray(data)?data[0]:data;
-   if(profile)return {...profile,unlimited_credits:Boolean(profile.is_admin)};
+   if(profile)return {...profile,credits:Number(profile.credits),credits_reset_at:profile.credits_reset_at||profile.next_reset_at,unlimited_credits:Boolean(profile.is_admin)};
   }
  }catch(error){
   console.warn("RPC crédits indisponible, lecture directe du profil :",error?.message||error);
@@ -434,30 +439,22 @@ async function getProfileForUser(authUser){
 }
 async function authRequest(path, body){
  const client=supabaseReady();
- if(path==="/api/register"){
+ if(path==="/api/register"||path==="/api/login"){
+   const email=String(body.email||"").trim().toLowerCase();
    const username=String(body.username||"").trim();
-   const email=String(body.email||"").trim().toLowerCase();
-   const password=String(body.password||"");
-   if(!/^[A-Za-z0-9_.-]{3,32}$/.test(username))throw new Error("Le pseudo doit faire 3 à 32 caractères (lettres, chiffres, ., _ ou -).");
+   const signup=path==="/api/register";
    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email))throw new Error("Adresse e-mail invalide.");
-   if(password.length<8||password.length>256)throw new Error("Le mot de passe doit contenir de 8 à 256 caractères.");
-   const {data,error}=await client.auth.signUp({
-     email,
-     password,
-     options:{data:{username}}
-   });
-   if(error)throw new Error(error.message);
-   if(!data.user)throw new Error("Le compte n’a pas pu être créé.");
-   // The trigger creates the profile from user metadata.
-   if(!data.session)throw new Error("Compte créé. Vérifie ton e-mail pour activer le compte, puis connecte-toi avec ton pseudo.");
-   return {user:await getProfileForUser(data.user)};
+   if(signup&&!/^[A-Za-z0-9_.-]{3,32}$/.test(username))throw new Error("Le pseudo doit faire 3 à 32 caractères (lettres, chiffres, ., _ ou -).");
+   const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:signup,...(signup?{data:{username}}:{})}});
+   if(error)throw new Error(error.status===429?"Trop de demandes. Patiente avant de demander un nouveau code.":error.message);
+   return {email,username,signup};
  }
- if(path==="/api/login"){
+ if(path==="/api/verify-otp"){
    const email=String(body.email||"").trim().toLowerCase();
-   const password=String(body.password||"");
-   if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email))throw new Error("Adresse e-mail invalide.");
-   const {data,error}=await client.auth.signInWithPassword({email,password});
-   if(error)throw new Error("E-mail ou mot de passe incorrect.");
+   const token=String(body.token||"").trim();
+   if(!/^[0-9]{6,8}$/.test(token))throw new Error("Saisis le code reçu par e-mail (6 à 8 chiffres).");
+   const {data,error}=await client.auth.verifyOtp({email,token,type:"email"});
+   if(error||!data.user||!data.session)throw new Error("Code invalide ou expiré. Vérifie le code ou demandes-en un nouveau.");
    return {user:await getProfileForUser(data.user)};
  }
  if(path==="/api/logout"){
@@ -475,7 +472,7 @@ async function authRequest(path, body){
 
 async function api(path,options={}){
  const method=(options.method||"GET").toUpperCase();
- if(["/api/me","/api/login","/api/register","/api/logout"].includes(path)){
+ if(["/api/me","/api/login","/api/register","/api/verify-otp","/api/logout"].includes(path)){
    let body={};
    if(options.body){
      try{body=typeof options.body==="string"?JSON.parse(options.body):options.body}catch{}
@@ -525,6 +522,10 @@ $("#searchBtn").addEventListener("click",async()=>{
   if(new Date(Date.UTC(year,month-1,day)).getUTCMonth()!==month-1){showState("Date invalide","Vérifie le jour et le mois de naissance.");return}
  }
  if(!currentUser){page("account");setNotice($("#accountNotice"),"Connecte-toi pour effectuer une recherche.","error");return}
+ if(!currentUser.unlimited_credits&&currentUser.credits_reset_at&&Date.parse(currentUser.credits_reset_at)<=Date.now()){
+  try{await refreshSession()}catch(error){showState("Solde indisponible",errorMessage(error));return}
+  if(!currentUser){page("account");return}
+ }
  const user=currentUser;
  if(!user.unlimited_credits&&Number(user.credits)<1){showState("Crédits insuffisants","Tu n’as plus de crédits disponibles. Consulte ton solde et le prochain renouvellement.");return}
  const endpoint=(window.NEXUS_CONFIG?.endpoint||"").trim();
@@ -593,7 +594,7 @@ function setNotice(element,message,kind="info"){element.textContent=message;elem
 function renderAccount(){
  const signedIn=Boolean(currentUser);
  $("#accountForms").hidden=signedIn;
- if(!signedIn)showAuthForm("signup");
+ if(!signedIn&&!pendingOtp)showAuthForm("signup");
  $("#accountProfile").hidden=!signedIn;
  accountNav.textContent=signedIn?currentUser.username:"Connexion";
  document.querySelectorAll(".upload-form").forEach(form=>{form.hidden=!signedIn});
@@ -710,44 +711,89 @@ if(initialSupabase){
 startOnlineCounter();
 startCreditCountdown();
 
+let pendingOtp=null;
+let otpResendAt=0;
 function showAuthForm(mode){
- const signup=$("#signupForm"),login=$("#loginForm");
- if(!signup||!login)return;
- const showLogin=mode==="login";
- signup.hidden=showLogin;
- login.hidden=!showLogin;
- const target=showLogin?login:signup;
- setTimeout(()=>target.querySelector("input")?.focus(),30);
+ const signup=$("#signupForm"),login=$("#loginForm"),otp=$("#otpForm");
+ if(!signup||!login||!otp)return;
+ signup.hidden=mode!=="signup";
+ login.hidden=mode!=="login";
+ otp.hidden=mode!=="otp";
+ const target=mode==="otp"?otp:mode==="login"?login:signup;
+ if(mode!=="otp")pendingOtp=null;
+ if(currentRoutePage()==="account")setTimeout(()=>target.querySelector("input")?.focus(),30);
 }
 $("#showLoginButton")?.addEventListener("click",()=>showAuthForm("login"));
 $("#showSignupButton")?.addEventListener("click",()=>showAuthForm("signup"));
+$("#changeOtpEmail")?.addEventListener("click",()=>{showAuthForm(pendingOtp?.signup?"signup":"login");setNotice(accountNotice,"Saisis ton adresse e-mail pour recevoir un code.")});
+function updateOtpResend(){
+ const button=$("#resendOtp");
+ if(!button)return;
+ const seconds=Math.max(0,Math.ceil((otpResendAt-Date.now())/1000));
+ button.disabled=seconds>0;
+ button.textContent=seconds?`Renvoyer dans ${seconds} s`:"Renvoyer le code";
+}
+async function requestOtp(payload){
+ const path=payload.signup?"/api/register":"/api/login";
+ const result=await api(path,{method:"POST",body:JSON.stringify(payload)});
+ pendingOtp=result;
+ otpResendAt=Date.now()+60000;
+ $("#otpEmail").textContent=result.email;
+ $("#otpForm").reset();
+ showAuthForm("otp");updateOtpResend();
+ setNotice(accountNotice,"Si cette adresse peut se connecter, un code vient de lui être envoyé. Vérifie aussi les courriers indésirables.","success");
+}
+for(const [id,signup] of [["signupForm",true],["loginForm",false]]){
+ $("#"+id).addEventListener("submit",async event=>{
+  event.preventDefault();
+  const form=event.currentTarget,button=form.querySelector('[type="submit"]');
+  if(!form.reportValidity()||button.disabled)return;
+  button.disabled=true;setNotice(accountNotice,"Envoi du code…");
+  try{
+   const values=new FormData(form);
+   await requestOtp({email:values.get("email"),username:values.get("username"),signup});
+  }catch(error){setNotice(accountNotice,error.message,"error")}
+  finally{button.disabled=false}
+ });
+}
+$("#otpForm").addEventListener("submit",async event=>{
+ event.preventDefault();
+ const form=event.currentTarget,button=form.querySelector('[type="submit"]');
+ if(!pendingOtp||button.disabled||!form.reportValidity())return;
+ button.disabled=true;setNotice(accountNotice,"Vérification du code…");
+ try{
+  const result=await api("/api/verify-otp",{method:"POST",body:JSON.stringify({email:pendingOtp.email,token:new FormData(form).get("token")})});
+  currentUser=result.user;pendingOtp=null;renderAccount();form.reset();
+  setNotice(accountNotice,"Adresse vérifiée. Tu es connecté à NEXUS.","success");
+ }catch(error){setNotice(accountNotice,error.message,"error")}
+ finally{button.disabled=false}
+});
+$("#resendOtp").addEventListener("click",async()=>{
+ if(!pendingOtp||Date.now()<otpResendAt)return;
+ const payload={...pendingOtp};
+ otpResendAt=Date.now()+60000;updateOtpResend();
+ try{await requestOtp(payload)}catch(error){setNotice(accountNotice,error.message,"error")}
+});
+setInterval(updateOtpResend,1000);
 
-$("#loginForm").addEventListener("submit",async event=>{
- event.preventDefault();
- const form=event.currentTarget,button=form.querySelector('[type="submit"]');
- button.disabled=true;
+// An announcement is published only after the database reset has succeeded.
+async function loadAccountResetAnnouncement(){
  try{
-  const values=new FormData(form);
-  const result=await api("/api/login",{method:"POST",body:JSON.stringify({email:values.get("email"),password:values.get("password")})});
-  currentUser=result.user;renderAccount();form.reset();
-  setNotice(accountNotice,"Connexion réussie.","success");
- }catch(error){setNotice(accountNotice,error.message,"error")}
- finally{button.disabled=false}
-});
-$("#signupForm").addEventListener("submit",async event=>{
- event.preventDefault();
- const form=event.currentTarget,button=form.querySelector('[type="submit"]');
- if(!form.reportValidity())return;
- button.disabled=true;
- setNotice(accountNotice,"Création du compte…");
- try{
-  const values=new FormData(form);
-  const result=await api("/api/register",{method:"POST",body:JSON.stringify({email:values.get("email"),username:values.get("username"),password:values.get("password")})});
-  currentUser=result.user;renderAccount();form.reset();
-  setNotice(accountNotice,"Compte créé et connecté.","success");
- }catch(error){setNotice(accountNotice,error.message,"error")}
- finally{button.disabled=false}
-});
+  const {data,error}=await supabaseReady().from("nexus_site_settings").select("accounts_reset_at").eq("id",1).maybeSingle();
+  if(error||!data?.accounts_reset_at)return;
+  const version=data.accounts_reset_at;
+  try{if(localStorage.getItem("nexus_account_reset_seen")===version)return}catch{}
+  const dialog=$("#accountResetDialog");
+  if(!dialog||dialog.open)return;
+  const remember=()=>{try{localStorage.setItem("nexus_account_reset_seen",version)}catch{}};
+  dialog.addEventListener("close",remember,{once:true});
+  $("#resetUnderstood").onclick=()=>dialog.close();
+  $("#resetCreateAccount").onclick=()=>{remember();dialog.close();page("account")};
+  dialog.showModal();
+ }catch(error){console.warn("Annonce indisponible :",error.message)}
+}
+loadAccountResetAnnouncement();
+
 $("#logoutButton").addEventListener("click",async()=>{
  try{
   await api("/api/logout",{method:"POST",body:"{}"});
@@ -1010,7 +1056,7 @@ function openAdmin(){
  $("#adminDashboard").hidden=true;$("#adminGate").hidden=false;
  $("#adminUserList").hidden=false;$("#userLogsPanel").hidden=true;
  if(!currentUser){
-  $("#adminGateDescription").textContent="Connecte-toi sur la page Connexion avec l’adresse e-mail du compte administrateur et son mot de passe.";
+  $("#adminGateDescription").textContent="Connecte-toi sur la page Connexion avec l’adresse e-mail du compte administrateur et le code reçu par e-mail.";
   $("#adminLoginLink").hidden=false;
   setNotice(adminNotice,"Une connexion est requise pour ouvrir la console.");return;
  }

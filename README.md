@@ -1,105 +1,81 @@
-# NEXUS — Vercel + Supabase
+# NEXUS Legacy — interface monochrome
 
-Version statique compatible Vercel, avec authentification Supabase, recherche côté navigateur, journal des recherches, modération BAVUR/BLOCUS et console admin.
+Site statique compatible Vercel, avec recherche, comptes Supabase, crédits quotidiens et modération vidéo.
 
-## Interface NEXUS — V46
+## Version 47
 
-- Palette fixe : violet, bleu et noir, avec des textes clairs pour la lisibilité. Aucun réglage de couleur admin ni chargement du thème Supabase.
-- Asset `assets/nexus-logo.png` intégré à l’accueil, au moteur, aux pages de compte et de communauté, au pied de page et au favicon. Sa teinte est harmonisée en CSS.
-- Recherche : validation des dates, protection contre les doubles clics, délai maximal de 25 secondes pour la source et de 20 secondes pour les opérations de crédit. Un appel à la source en échec ne déclenche pas de débit. Le crédit est validé après réception de fiches au format attendu ; un résultat vide valide consomme un crédit.
-- Le moteur continue d’appeler directement `NEXUS_CONFIG.endpoint` : la source doit autoriser le domaine du site via CORS. Aucun proxy `/api/search` n’est fourni.
-- Les résultats restent visibles si l’enregistrement final dans l’historique échoue.
-- Vérification locale sur macOS : `python3 tests/verify_search.py` (JavaScriptCore système, aucune dépendance à installer).
+- Palette noir, blanc et gris sur toutes les pages, logos monochromes, cartes et navigation affinées.
+- Animations d’entrée, apparition des résultats et balayage lumineux de l’aperçu ; préférence de réduction des mouvements respectée.
+- Inscription par pseudo + e-mail, puis vérification par code ; connexion par e-mail + code sans mot de passe.
+- Renvoi du code après 60 secondes, modification de l’adresse et messages pour les codes invalides ou expirés.
+- Cinq crédits quotidiens à minuit, heure de Paris, avec prise en compte des changements d’heure. Le solde est remis à cinq, sans cumul. Les administrateurs restent illimités.
+- Le renouvellement est calculé côté serveur lors de la consultation du solde ou du débit. Un verrou empêche deux recherches simultanées de dépenser le même crédit. Aucun cron n’est nécessaire ; les comptes inactifs sont remis à jour à leur prochaine utilisation.
+- L’annonce de suppression apparaît uniquement si `nexus_site_settings.accounts_reset_at` a été renseigné après une réinitialisation réussie. Elle est mémorisée par navigateur pour cette version de la réinitialisation. Le dialogue natif gère le focus, Échap et la navigation clavier.
 
-## Présentation commune
+## Configuration publique
 
-- Direction visuelle NEXUS : fond noir, accents violets et bleus, grand titre central, aperçu du moteur et cartes compactes.
-- Accueil avec compteurs de critères et de catégories calculés depuis le formulaire, sans statistiques d’index ou d’utilisateurs inventées.
-- Mise en page de recherche à deux panneaux sur ordinateur, empilés sur mobile.
-- Boutons de catégorie pour isoler un groupe de critères ; le bouton « Tous » rétablit la vue complète.
-- Recherche de critères avec le raccourci `/`, compteurs par catégorie et pastilles pour retirer les valeurs saisies. `Échap` efface le filtre de critères ; `Entrée` dans un champ lance la recherche.
-- Fiches de résultats avec initiales, icônes et informations hiérarchisées, affichage liste/grille et filtre local sur les résultats déjà reçus.
-- Contenu visible immédiatement, transitions de survol discrètes ; la préférence système de réduction des animations est respectée.
-- `css/interface.css` regroupe la nouvelle présentation commune. `js/interface.js` gère les interactions locales ; `js/app.js` conserve la recherche, les comptes, les crédits et l’administration.
-- Les huit fichiers `index.html` partagent la même structure : répercuter les changements de balisage sur chaque route.
+`js/config.js` contient l’URL Supabase, la clé publique publishable et l’endpoint de recherche. Aucune clé secrète ou service role ne doit figurer dans le site.
 
-Pour prévisualiser depuis la racine : `python3 -m http.server 8000`, puis ouvrir `http://localhost:8000/`. Aucun build ni installation de dépendances n’est nécessaire.
+La source doit autoriser le domaine du site via CORS. Le moteur utilise directement l’endpoint configuré. Aucun proxy n’est fourni. Une réponse valide, même vide, coûte un crédit ; une erreur de la source ne déclenche aucun débit. Une erreur d’enregistrement de l’historique ne masque pas les résultats déjà payés.
 
-## Configuration
+Le client Supabase chargé par CDN est fixé à `2.119.0`.
 
-1. Dans `js/config.js`, renseigne :
-   - `supabaseUrl` : l'URL du projet Supabase (sans `/rest/v1/`)
-   - `supabaseAnonKey` : la clé **Publishable / anon**
-   - `endpoint` : l'endpoint de recherche autorisé que tu utilises
-2. N'utilise jamais une clé `sb_secret_...` ou `service_role` dans le navigateur.
-3. Dans Supabase > SQL Editor, exécute les migrations dans cet ordre :
-   - `supabase_schema.sql` si la base initiale n'existe pas encore
-   - `supabase_search_fix.sql`
-   - `supabase_admin_media_fix.sql`
-4. Dans Authentication > Sign In / Providers, active Email si nécessaire.
-5. Crée ton compte, puis passe `is_admin` à `true` dans `nexus_profiles` pour le compte administrateur.
-6. Déploie le dossier sur Vercel.
+## Installation de la base
 
-## Console admin
+Sur une installation neuve, exécuter dans cet ordre :
 
-Le panneau admin permet désormais :
+1. `supabase_schema.sql`
+2. `supabase_search_fix.sql`
+3. `supabase_admin_media_fix.sql`
+4. `supabase_credit_auth_fix.sql`
 
-- de charger tous les pseudos dans un menu déroulant ;
-- de définir directement le nombre de crédits d'un compte ;
-- de voir l'activité d'un utilisateur ;
-- de voir les critères exacts enregistrés dans les journaux de recherche ;
-- de modérer les vidéos BAVUR et BLOCUS ;
-- d'approuver ou refuser une vidéo.
+Sur le projet existant disposant déjà des tables et fonctions admin, appliquer seulement `supabase_credit_auth_fix.sql`, après inspection du schéma et sauvegarde. Ce script ne supprime aucun compte. Ne pas réappliquer ensuite les anciens scripts de recherche : ils remplaceraient la fonction de débit quotidien.
 
-## Vidéos BAVUR / BLOCUS
+Le statut administrateur vient de `nexus_profiles.is_admin`, colonne non modifiable par les utilisateurs. Les métadonnées utilisateur servent uniquement au pseudo. Si un pseudo existe déjà, le serveur ajoute un suffixe pour permettre la création du profil.
 
-Les utilisateurs connectés peuvent envoyer un MP4 jusqu'à 500 Mo avec un titre et une description.
+## Activer les codes e-mail dans Supabase
 
-Une vidéo reste en attente jusqu'à validation d'un admin. Lorsqu'elle est approuvée, elle devient visible dans :
+Dans **Authentication → Sign In / Providers → Email** :
 
-- la page BAVUR ou BLOCUS ;
-- la section **Avant-première** située en bas de l'accueil.
+- Activer Email et les inscriptions.
+- Conserver la vérification des adresses.
+- Régler l’expiration des codes à **600 secondes** et leur longueur à **6 chiffres**. Le formulaire accepte également les projets configurés pour huit chiffres.
 
-La migration crée les buckets Supabase Storage nécessaires et leurs règles RLS.
+Dans **Authentication → Email Templates**, installer le contenu de `email-templates/otp.html` pour **Magic Link / OTP** et **Confirm signup**, avec l’objet « Ton code de connexion NEXUS ». La variable `{{ .Token }}` affiche le code. Le parcours utilise `signInWithOtp` et `verifyOtp` avec le type `email`.
 
+Configurer un SMTP de production dans Supabase et tester avec une adresse réelle autorisée : le service intégré Supabase limite l’envoi aux adresses de l’équipe et ne convient pas aux inscriptions publiques. Ne pas désactiver la vérification e-mail pour contourner un problème d’envoi.
 
-## Correctif console admin
+Documentation : [connexion par code](https://supabase.com/docs/guides/auth/auth-email-passwordless), [SMTP](https://supabase.com/docs/guides/auth/auth-smtp).
 
-Exécute `supabase_admin_media_fix.sql` en entier dans Supabase > SQL Editor. Cette migration inclut aussi les colonnes `username` et `criteria` du journal `nexus_search_logs`, afin que la console admin puisse afficher les critères exacts.
+## Réinitialisation exceptionnelle des membres
 
+`supabase_reset_members_once.sql` est une opération destructive séparée de l’installation normale. Il faut d’abord exporter une sauvegarde privée, inspecter les comptes administrateurs et traiter les éventuels fichiers possédés par les membres via l’API Storage. Ne jamais publier cette sauvegarde dans GitHub.
 
-### Suppression des vidéos
-Dans la console administrateur, la section BAVUR & BLOCUS permet désormais de supprimer définitivement une vidéo en attente ou déjà publiée. La suppression retire le fichier du stockage et la ligne correspondante de `nexus_videos`.
+Le script conserve les profils `is_admin`, les comptes administrateurs identifiés par les métadonnées applicatives protégées et les superadministrateurs. Il refuse de supprimer les comptes si aucun administrateur n’est identifié. Il supprime les sessions et comptes Auth des autres membres ; les tables liées par `ON DELETE CASCADE`, dont leur historique et leurs vidéos, sont également concernées. Les fichiers Storage nécessitent un traitement distinct.
 
+La suppression des comptes et l’activation de l’annonce sont dans la même transaction. En cas d’erreur, tout est annulé. Ne jamais relancer ce script après la réouverture des inscriptions : cela supprimerait aussi les nouveaux comptes.
 
-### Si Supabase affiche `Could not find the function public.nexus_start_search(...) in the schema cache`
+Un JWT déjà émis reste signé jusqu’à expiration, mais les fonctions de crédits et les privilèges admin exigent un profil encore présent.
 
-Exécute entièrement `supabase_admin_media_fix.sql` dans Supabase > SQL Editor. La migration recharge automatiquement le cache de schéma PostgREST à la fin.
+## Administration et vidéos
 
+La console permet de choisir un utilisateur, fixer ses crédits, consulter ses recherches et critères, ouvrir/fermer le site et modérer les vidéos BAVUR / BLOCUS. Les vidéos approuvées apparaissent sur l’accueil. Le nombre de crédits défini manuellement s’applique jusqu’au prochain renouvellement quotidien.
 
-## V11 — recherche legacy conservée
-- La recherche utilise directement `NEXUS_CONFIG.endpoint`, comme la version legacy qui fonctionnait.
-- Aucun proxy `/api/search` n'est utilisé.
-- Les fonctions admin, crédits, historique, critères et vidéos restent conservées.
-- Les erreurs JSON reçues comme objets sont maintenant converties proprement en texte afin d'éviter l'affichage `[object Object]`.
+## Vérification locale
 
-## V32 — présence réelle + crédits quotidiens
+```sh
+python3 -m http.server 8000
+```
 
-- Le compteur « en ligne » utilise Supabase Realtime Presence et compte uniquement les présences actuellement actives.
-- Les comptes utilisateurs reçoivent 5 crédits par jour.
-- Le renouvellement se fait automatiquement à minuit (Europe/Paris), avec un reset côté serveur.
-- Le bouton « Crédits » dans la barre du haut ouvre une fenêtre indiquant le solde et le temps restant avant le prochain renouvellement.
-- Le renouvellement quotidien nécessite le RPC `nexus_get_credit_status` côté Supabase. La migration quotidienne n’est pas incluse dans ce dépôt ; sans ce RPC, le site utilise le solde du profil sans promettre un renouvellement automatique.
-- Les administrateurs gardent des crédits illimités.
+Ouvrir `http://localhost:8000/`. Aucun build n’est nécessaire. Les huit routes partagent le même balisage et les fichiers `js/app.js`, `js/interface.js`, `css/style.css` et `css/interface.css`.
 
+Tests hors ligne sur macOS, sans envoi d’e-mails ni recherche réelle :
 
-## Navigation multipage
-Les routes Vercel sont disponibles via `/accueil/`, `/recherche/`, `/connexion/`, `/bavur/`, `/blocus/`, `/discord/` et `/admin/`. Chaque route utilise le même cœur Supabase et la même interface, avec une transition d'entrée dédiée.
+```sh
+python3 tests/verify_search.py
+python3 tests/verify_auth.py
+```
 
-## V43 — icônes et boutons violets
-- L'interface adopte un thème violet par défaut, plus lisible sur ordinateur et mobile.
-- Les anciennes préférences de thème rouge sont converties à l'affichage en violet.
-- Les animations ambiantes rouges sont supprimées et les pages principales ont une nouvelle composition.
-- Les boutons ont un style violet uniforme et les emojis de l'onglet Recherche sont remplacés par des icônes SVG.
-- Les fonctions Supabase, la recherche et son endpoint restent inchangés.
-- L'administrateur conserve le choix du thème et des couleurs personnalisées. Exécute `supabase_site_theme.sql` pour appliquer le nouveau violet par défaut aux installations qui utilisaient encore le thème rouge initial.
+Ces tests vérifient les interactions de recherche, l’absence de débit en cas d’erreur de source, les états de session, les formulaires, les codes e-mail et l’adaptation des soldes. Les réglages SMTP, la suppression des vrais comptes et les règles du projet doivent aussi être vérifiés sur Supabase avant mise en ligne.
+
+Test d’intégration facultatif dans une base locale jetable (dépendances `pgserver` et `psycopg2-binary`) : `python3 tests/verify_database.py`. Ce test couvre aussi les débits concurrents, les permissions, les changements d’heure et la conservation des administrateurs pendant la réinitialisation.
