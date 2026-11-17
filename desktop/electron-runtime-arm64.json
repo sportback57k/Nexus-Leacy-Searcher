@@ -1,0 +1,10 @@
+{
+  "version": "43.8.10",
+  "platform": "darwin-arm64",
+  "architecture": "arm64",
+  "label": "Apple-Silicon",
+  "windowLabel": "APPLE SILICON",
+  "minimumMacOS": "12.0",
+  "archive": "electron-v43.8.10-darwin-arm64.zip",
+  "sha256": "4e63242d2e5e08b6cfc203304c6f62c561eea574cb4065a626d488b38bff78f7"
+}

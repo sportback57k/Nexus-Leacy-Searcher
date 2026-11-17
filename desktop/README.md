@@ -4,7 +4,7 @@ Application Electron du site `https://nexussearcher.vercel.app`. Le site est cha
 
 - Nom : **Nexus Legacy**
 - Version : **1.0.0**
-- Cibles : **Mac Intel, macOS Monterey 12+** et **Windows 10/11, x64**
+- Cibles : **Mac Intel** et **Mac Apple Silicon (M1 et suivants), macOS Monterey 12+**, ainsi que **Windows 10/11, x64**
 - Moteur : **Electron 43.8.10**, fixé et vérifié par SHA-256
 - Icône : logo du site, désaturé comme l’interface actuelle et adapté au format macOS
 - Distribution : `.dmg` avec raccourci Applications
@@ -23,6 +23,14 @@ Prérequis : Python 3 et les outils en ligne de commande Xcode. Aucun npm ni mod
 ```sh
 python3 desktop/build.py
 ```
+
+La commande ci-dessus crée le DMG Intel. Pour générer le DMG natif Apple Silicon :
+
+```sh
+python3 desktop/build.py arm64
+```
+
+Les deux versions ont des moteurs Electron natifs séparés, téléchargés depuis les archives officielles puis contrôlés par SHA-256 (`electron-runtime.json` pour Intel, `electron-runtime-arm64.json` pour Apple Silicon). La fenêtre du DMG affiche aussi l’architecture correspondante. Un Mac Intel peut assembler le DMG ARM64 sans lancer l’application : il faut un Mac Apple Silicon pour l’exécuter.
 
 Le script télécharge exclusivement l’archive officielle Electron épinglée dans `electron-runtime.json`, vérifie son empreinte, crée l’icône avec les outils Apple, adapte les identifiants du bundle, signe localement l’application et produit un DMG vérifié. Les sorties sont dans `desktop/build`, `desktop/dist` et sur le Bureau.
 

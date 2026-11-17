@@ -2,6 +2,7 @@ import AppKit
 import CoreGraphics
 
 let destination = CommandLine.arguments[1]
+let architecture = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "MAC INTEL"
 let width = 900
 let height = 620
 let rep = NSBitmapImageRep(
@@ -66,7 +67,7 @@ arrow.move(to: NSPoint(x: 365, y: 260)); arrow.line(to: NSPoint(x: 532, y: 260))
 arrow.move(to: NSPoint(x: 519, y: 270)); arrow.line(to: NSPoint(x: 532, y: 260)); arrow.line(to: NSPoint(x: 519, y: 250))
 NSColor(calibratedWhite: 1, alpha: 0.82).setStroke(); arrow.lineWidth = 1.4; arrow.lineCapStyle = .round; arrow.stroke()
 
-text("MAC INTEL  ·  macOS 12+", x: 342, y: 73, size: 10, weight: .medium,
+text("\(architecture)  ·  macOS 12+", x: 320, y: 73, size: 10, weight: .medium,
      color: NSColor(calibratedWhite: 0.55, alpha: 1), tracking: 1.2)
 
 NSGraphicsContext.current?.flushGraphics()

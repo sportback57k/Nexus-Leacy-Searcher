@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Build the Monterey/Intel DMG using Apple's tools and a pinned Electron binary."""
-import hashlib,json,os,plistlib,shutil,subprocess,sys
+"""Build styled, architecture-specific macOS DMGs from pinned Electron binaries."""
+import hashlib,json,os,platform,plistlib,shutil,subprocess,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
-CONFIG=json.loads((ROOT/'electron-runtime.json').read_text())
+ARCH=sys.argv[1] if len(sys.argv)>1 else 'x64'
+if ARCH not in ('x64','arm64'):raise SystemExit('Usage: python3 desktop/build.py [x64|arm64]')
+CONFIG=json.loads((ROOT/('electron-runtime.json' if ARCH=='x64' else f'electron-runtime-{ARCH}.json')).read_text())
 NAME='Nexus Legacy';BUNDLE_ID='com.nexuslegacy.desktop';VERSION='1.0.0'
-BUILD=ROOT/'build';DIST=ROOT/'dist'
+BUILD=ROOT/'build';WORK=BUILD/CONFIG['label'];DIST=ROOT/'dist'
 CACHE=Path.home()/'Library/Caches/Nexus-Legacy-build'
 
 def run(*args,quiet=False,env=None):
@@ -13,29 +15,34 @@ def run(*args,quiet=False,env=None):
 def plist_update(path,values):
  data=plistlib.loads(path.read_bytes());data.update(values);path.write_bytes(plistlib.dumps(data))
 def main():
- CACHE.mkdir(parents=True,exist_ok=True);BUILD.mkdir(exist_ok=True);DIST.mkdir(exist_ok=True)
+ CACHE.mkdir(parents=True,exist_ok=True);BUILD.mkdir(exist_ok=True);WORK.mkdir(parents=True,exist_ok=True);DIST.mkdir(exist_ok=True)
  archive=CACHE/CONFIG['archive']
  if not archive.exists():
   print('Téléchargement du moteur Electron…',flush=True)
   run('curl','-fLSs','--retry','2',f"https://github.com/electron/electron/releases/download/v{CONFIG['version']}/{CONFIG['archive']}",'-o',archive)
  if hashlib.sha256(archive.read_bytes()).hexdigest()!=CONFIG['sha256']:raise RuntimeError('Checksum Electron incorrect')
  print('Archive officielle Electron vérifiée.',flush=True)
- unpacked=BUILD/'runtime'
+ unpacked=WORK/'runtime'
  if not (unpacked/'Electron.app').exists():
   unpacked.mkdir(exist_ok=True);run('ditto','-x','-k',archive,unpacked,quiet=True)
  binary=unpacked/'Electron.app/Contents/MacOS/Electron'
- env={**os.environ,'ELECTRON_RUN_AS_NODE':'1'}
- actual=subprocess.check_output([str(binary),'-p','process.versions.electron'],env=env,text=True).strip()
- if actual!=CONFIG['version']:raise RuntimeError('Version Electron inattendue : '+actual)
- print('Moteur compatible avec ce Mac : Electron '+actual,flush=True)
- master=BUILD/'NexusIcon.png';iconset=BUILD/'NexusIcon.iconset';iconset.mkdir(exist_ok=True)
+ if CONFIG['architecture']==platform.machine().replace('x86_64','x64'):
+  env={**os.environ,'ELECTRON_RUN_AS_NODE':'1'}
+  actual=subprocess.check_output([str(binary),'-p','process.versions.electron'],env=env,text=True).strip()
+  if actual!=CONFIG['version']:raise RuntimeError('Version Electron inattendue : '+actual)
+  print('Moteur Electron exécuté : '+actual,flush=True)
+ else:
+  actual=subprocess.check_output(['lipo','-archs',binary],text=True).strip().split()
+  if CONFIG['architecture'] not in actual:raise RuntimeError('Architecture Electron inattendue : '+repr(actual))
+  print('Architecture Electron vérifiée : '+CONFIG['architecture'],flush=True)
+ master=WORK/'NexusIcon.png';iconset=WORK/'NexusIcon.iconset';iconset.mkdir(exist_ok=True)
  run('xcrun','swift',ROOT/'icon.swift',ROOT.parent/'assets/nexus-logo.png',master,quiet=True)
  for size in [16,32,128,256,512]:
   for scale in [1,2]:
    filename=f'icon_{size}x{size}'+('@2x' if scale==2 else '')+'.png'
    run('sips','-z',str(size*scale),str(size*scale),master,'--out',iconset/filename,quiet=True)
- icon=BUILD/'NexusIcon.icns';run('iconutil','-c','icns',iconset,'-o',icon,quiet=True)
- staging=BUILD/'image';app=staging/(NAME+'.app')
+ icon=WORK/'NexusIcon.icns';run('iconutil','-c','icns',iconset,'-o',icon,quiet=True)
+ staging=WORK/'image';app=staging/(NAME+'.app')
  if staging.exists():shutil.rmtree(staging)
  staging.mkdir();run('ditto',unpacked/'Electron.app',app,quiet=True)
  contents=app/'Contents';main_plist=contents/'Info.plist'
@@ -69,14 +76,15 @@ def main():
  run('codesign','--force','--deep','--sign','-','--timestamp=none',app,quiet=True)
  run('codesign','--verify','--deep','--strict',app,quiet=True)
  (staging/'Applications').symlink_to('/Applications',target_is_directory=True)
- bgimage=BUILD/'Nexus-Installer.png'
- run('xcrun','swift',ROOT/'dmg-background.swift',bgimage,quiet=True)
- dmg=DIST/f'Nexus-Legacy-{VERSION}-macOS-Intel.dmg'
+ bgimage=WORK/'Nexus-Installer.png'
+ run('xcrun','swift',ROOT/'dmg-background.swift',bgimage,CONFIG['windowLabel'],quiet=True)
+ dmg=DIST/f'Nexus-Legacy-{VERSION}-macOS-{CONFIG["label"]}.dmg'
  print('Préparation de la fenêtre d’installation…',flush=True)
- working=BUILD/'Nexus-Legacy-layout.dmg'
+ volume_name='Nexus Legacy '+CONFIG['label']+' Installer'
+ working=WORK/'Nexus-Legacy-layout.dmg'
  if working.exists():working.unlink()
- run('hdiutil','create','-volname',NAME,'-srcfolder',staging,'-fs','HFS+','-format','UDRW','-ov',working,quiet=True)
- attached=subprocess.check_output(['hdiutil','attach','-readwrite','-noverify','-nobrowse','-plist',str(working)])
+ run('hdiutil','create','-volname',volume_name,'-srcfolder',staging,'-fs','HFS+','-format','UDRW','-ov',working,quiet=True)
+ attached=subprocess.check_output(['hdiutil','attach','-readwrite','-noverify','-plist',str(working)])
  info=plistlib.loads(attached)
  mountpoint=next(Path(item['mount-point']) for item in info['system-entities'] if 'mount-point' in item)
  device=next(item['dev-entry'] for item in info['system-entities'] if 'mount-point' in item)
@@ -84,9 +92,12 @@ def main():
   background=mountpoint/'.background';background.mkdir()
   shutil.copy2(bgimage,background/'Nexus-Installer.png')
   run('chflags','hidden',background,quiet=True)
-  apple_script='''tell application "Finder"
-  tell disk "Nexus Legacy"
+  background_path=str(background/'Nexus-Installer.png')
+  apple_script=f'''tell application id "com.apple.finder"
+  activate
+  tell disk "{volume_name}"
    open
+   delay 1
    set theWindow to container window
    set current view of theWindow to icon view
    set toolbar visible of theWindow to false
@@ -96,16 +107,18 @@ def main():
    set text size of icon view options of theWindow to 14
    set arrangement of icon view options of theWindow to not arranged
    set viewOptions to the icon view options of theWindow
-   set background picture of viewOptions to file ".background:Nexus-Installer.png"
+   set background picture of viewOptions to POSIX file "{background_path}"
    set position of item "Nexus Legacy.app" of theWindow to {265, 360}
    set position of item "Applications" of theWindow to {755, 360}
-   delay 2
-   close
-   open
    update without registering applications
+   delay 6
+   close
   end tell
  end tell'''
   run('osascript','-e',apple_script,quiet=True)
+  ds_store=mountpoint/'.DS_Store'
+  if not ds_store.is_file() or ds_store.stat().st_size==0:
+   raise RuntimeError('Finder n’a pas enregistré le fond personnalisé dans le DMG.')
  finally:run('hdiutil','detach',device,quiet=True)
  print('Compression et vérification du DMG…',flush=True)
  if dmg.exists():dmg.unlink()

@@ -1,6 +1,9 @@
 {
   "version": "43.8.10",
   "platform": "darwin-x64",
+  "architecture": "x64",
+  "label": "Intel",
+  "windowLabel": "MAC INTEL",
   "minimumMacOS": "12.0",
   "archive": "electron-v43.8.10-darwin-x64.zip",
   "sha256": "5f43558b6b6afed1acd4ea107ceee4576327c90a5a63ab65da3d791c39b503c9"
