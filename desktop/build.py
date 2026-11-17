@@ -69,6 +69,8 @@ def main():
  run('codesign','--force','--deep','--sign','-','--timestamp=none',app,quiet=True)
  run('codesign','--verify','--deep','--strict',app,quiet=True)
  (staging/'Applications').symlink_to('/Applications',target_is_directory=True)
+ bgimage=BUILD/'Nexus-Installer.png'
+ run('xcrun','swift',ROOT/'dmg-background.swift',bgimage,quiet=True)
  (staging/'Installer Nexus Legacy.txt').write_text('''NEXUS LEGACY — INSTALLATION
 
 1. Glisse « Nexus Legacy » dans « Applications ».
@@ -86,12 +88,49 @@ Préférences Système → Sécurité et confidentialité → Général.
 Ne désactive pas les protections de macOS.
 ''')
  dmg=DIST/f'Nexus-Legacy-{VERSION}-macOS-Intel.dmg'
- print('Création du DMG…',flush=True)
- run('hdiutil','create','-volname',NAME,'-srcfolder',staging,'-format','UDZO','-ov',dmg,quiet=True)
+ print('Préparation de la fenêtre d’installation…',flush=True)
+ working=BUILD/'Nexus-Legacy-layout.dmg'
+ if working.exists():working.unlink()
+ run('hdiutil','create','-volname',NAME,'-srcfolder',staging,'-fs','HFS+','-format','UDRW','-ov',working,quiet=True)
+ attached=subprocess.check_output(['hdiutil','attach','-readwrite','-noverify','-nobrowse','-plist',str(working)])
+ info=plistlib.loads(attached)
+ mountpoint=next(Path(item['mount-point']) for item in info['system-entities'] if 'mount-point' in item)
+ device=next(item['dev-entry'] for item in info['system-entities'] if 'mount-point' in item)
+ try:
+  background=mountpoint/'.background';background.mkdir()
+  shutil.copy2(bgimage,background/'Nexus-Installer.png')
+  run('chflags','hidden',background,quiet=True)
+  apple_script='''tell application "Finder"
+  tell disk "Nexus Legacy"
+   open
+   set theWindow to container window
+   set current view of theWindow to icon view
+   set toolbar visible of theWindow to false
+   set statusbar visible of theWindow to false
+   set bounds of theWindow to {120, 80, 1020, 700}
+   set icon size of icon view options of theWindow to 128
+   set text size of icon view options of theWindow to 14
+   set arrangement of icon view options of theWindow to not arranged
+   set viewOptions to the icon view options of theWindow
+   set background picture of viewOptions to file ".background:Nexus-Installer.png"
+   set position of item "Nexus Legacy.app" of theWindow to {265, 360}
+   set position of item "Applications" of theWindow to {755, 360}
+   delay 2
+   close
+   open
+   update without registering applications
+  end tell
+ end tell'''
+  run('osascript','-e',apple_script,quiet=True)
+ finally:run('hdiutil','detach',device,quiet=True)
+ print('Compression et vérification du DMG…',flush=True)
+ if dmg.exists():dmg.unlink()
+ run('hdiutil','convert',working,'-format','UDZO','-imagekey','zlib-level=9','-o',dmg,quiet=True)
  run('hdiutil','verify',dmg,quiet=True)
  digest=hashlib.sha256(dmg.read_bytes()).hexdigest()
  dmg.with_suffix('.dmg.sha256').write_text(digest+'  '+dmg.name+'\n')
  desktop=Path.home()/'Desktop'/dmg.name;shutil.copy2(dmg,desktop)
+ working.unlink()
  print('DMG vérifié : '+str(desktop),flush=True)
  print('Application : '+str(app),flush=True)
 if __name__=='__main__':main()

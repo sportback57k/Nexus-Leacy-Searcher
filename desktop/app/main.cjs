@@ -64,6 +64,7 @@ function createWindow() {
   const win = new BrowserWindow({
     title: 'Nexus Legacy', width: Math.min(1360, work.width - 40), height: Math.min(900, work.height - 60),
     minWidth: 760, minHeight: 560, show: false, backgroundColor: '#080808',
+    ...(process.platform === 'win32' ? { icon: path.join(__dirname, 'nexus.ico') } : {}),
     autoHideMenuBar: true,
     webPreferences: {
       session: browserSession, nodeIntegration: false, contextIsolation: true,

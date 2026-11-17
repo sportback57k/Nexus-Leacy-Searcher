@@ -3,7 +3,7 @@
   "productName": "Nexus Legacy",
   "version": "1.0.0",
   "private": true,
-  "description": "Application macOS du site Nexus Legacy",
+  "description": "Application desktop du site Nexus Legacy",
   "main": "main.cjs",
   "author": "Nexus Legacy",
   "license": "UNLICENSED"
