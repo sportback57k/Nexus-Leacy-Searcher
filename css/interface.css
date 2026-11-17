@@ -485,3 +485,88 @@ body { background: radial-gradient(ellipse at 50% -10%, #ffffff0e, transparent 5
 .moderation-dialog .auth-field { display:block; margin:18px 0; }
 .moderation-dialog .auth-field select,.moderation-dialog .auth-field textarea { display:block; margin-top:8px; }
 @media(max-width:620px){ .user-row { flex-wrap:wrap; gap:14px; } .user-row-actions { justify-content:flex-start; width:100%; } .activity-heading { flex-direction:column; gap:6px; } }
+
+/* Responsive finishing pass: touch-first navigation and narrow-screen layouts. */
+@media (max-width: 760px) {
+  html, body { min-width: 320px; width: 100%; overflow-x: hidden; }
+  .topbar {
+    position: sticky !important;
+    top: 0;
+    z-index: 100;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-rows: auto auto !important;
+    gap: 8px 10px !important;
+    width: 100%;
+    height: auto !important;
+    min-height: 0;
+    padding: max(8px, env(safe-area-inset-top)) 12px 9px !important;
+  }
+  .brand { grid-column: 1; grid-row: 1; min-width: 0; gap: 8px; }
+  .brand-mark { flex: 0 0 auto; width: 34px; height: 34px; filter: grayscale(1) !important; }
+  .brand-name { min-width: 0; font-size: 12px; letter-spacing: 1.8px; }
+  .brand-name small { font-size: 7px; letter-spacing: 1.3px; }
+  .header-actions {
+    grid-column: 2; grid-row: 1; min-width: 0; gap: 4px;
+    flex-wrap: nowrap; align-self: center; justify-self: end;
+  }
+  .header-actions .online-counter { display: none !important; }
+  .header-actions .credit-pill, .header-actions .header-button {
+    min-height: 40px !important; padding: 0 8px; border-radius: 8px; font-size: 10px;
+    white-space: nowrap;
+  }
+  .navigation {
+    grid-column: 1 / -1 !important; grid-row: 2 !important;
+    display: flex; width: 100%; min-width: 0; max-width: 100%;
+    justify-content: flex-start !important; gap: 4px; overflow-x: auto;
+    padding: 3px; border-radius: 10px;
+    -webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain;
+    scrollbar-width: none; scroll-snap-type: x proximity;
+  }
+  .navigation::-webkit-scrollbar { display: none; }
+  .navigation button {
+    min-height: 42px; flex: 0 0 auto; padding: 0 13px !important;
+    border-radius: 7px; font-size: 11px; scroll-snap-align: start;
+  }
+  .shell { width: min(100% - 28px, 620px) !important; min-width: 0; }
+  .page, #main, .card, .admin-card, .auth-card, .results, .filters { min-width: 0; }
+  #main { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+  #main .page { scroll-margin-top: 150px; }
+  #main .search-page .layout { grid-template-columns: minmax(0, 1fr) !important; }
+  #main .search-page .filters { position: static !important; max-height: none !important; overflow: visible !important; }
+  #main .search-page .results { min-height: 280px; }
+  #main .search-page .group-content > .grid, #main .search-page .grid { min-width: 0; }
+  #main .result, #main .account-profile, #main .user-row, #main .activity-item,
+  #main .video-card, #main .feature, #main .review-item { min-width: 0; overflow-wrap: anywhere; }
+  #main .user-row-actions { justify-content: flex-start; }
+  #main .activity-heading { align-items: flex-start; }
+  #main button, #main a.primary, #main .search-button, #creditModal button,
+  .header-actions button { min-height: 44px; }
+  #main .copy-result { min-width: 44px; min-height: 44px; }
+  #main input, #main select, #main textarea {
+    max-width: 100%; font-size: 16px !important; scroll-margin-top: 145px;
+  }
+  .reset-dialog, .moderation-dialog {
+    width: min(100% - 24px, 520px); max-height: calc(100dvh - 24px);
+    overflow: auto; overscroll-behavior: contain;
+  }
+  .maintenance-overlay { padding: 12px; }
+  .maintenance-card { padding: 24px 18px; }
+  .maintenance-actions { flex-direction: column; }
+}
+
+@media (max-width: 390px) {
+  .topbar { padding-inline: 9px !important; column-gap: 6px !important; }
+  .brand { gap: 6px; }
+  .brand-mark { width: 30px; height: 30px; }
+  .brand-name { font-size: 10px; letter-spacing: 1.4px; }
+  .brand-name small { font-size: 6px; letter-spacing: 1px; }
+  .header-actions { gap: 3px; }
+  .header-actions .credit-pill, .header-actions .header-button { padding-inline: 6px; font-size: 9px; }
+  .navigation button { padding-inline: 11px !important; }
+  #main .search-page .filters, #main .search-page .results { padding: 14px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation { scroll-behavior: auto !important; }
+}
