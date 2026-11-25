@@ -1,20 +1,20 @@
 const groups={
 "Identité":[["nom_famille","Nom"],["prenom","Prénom"],["nom_naissance","Nom de naissance"],["nom_affichage","Nom affiché"]],
 "Naissance":[["jour_naissance","Jour"],["mois_naissance","Mois"],["annee_naissance","Année"],["date_naissance","Date exacte"],["ville_naissance","Ville de naissance"],["genre","Genre"]],
-"Contact":[["email","Email"],["telephone","Téléphone"],["nom_utilisateur","Nom d’utilisateur"],["adresse_ip","Adresse IP"]],
+"Contact":[["telephone","Téléphone"],["nom_utilisateur","Nom d’utilisateur"],["adresse_ip","Adresse IP"]],
 "Localisation":[["adresse","Adresse"],["code_postal","Code postal"],["ville","Ville"]],
 "FiveM / GTA RP":[["steam_id","Steam ID"],["fivem_license","FiveM License"],["discord_id","Discord ID"],["xbox_live_id","Xbox Live (XBL)"],["live_id","Live ID"],["fivem_license2","FiveM License2"]],
 "Champs avancés":[["iban","IBAN"],["bic","BIC"],["vin_plaque","VIN / plaque"],["numero_serie","N° de série"]]
 };
 const groupExtras={
  "Localisation":[["complement_adresse","Complément d’adresse"],["departement","Département"],["region","Région"],["pays","Pays"],["lieu_naissance","Lieu de naissance"]],
- "Champs avancés":[["civilite","Civilité"],["mobile","Mobile"],["societe","Société"],["profession","Profession"],["fonction","Fonction"],["siret","SIRET"],["siren","SIREN"],["marque","Marque"],["modele","Modèle"],["immatriculation","Immatriculation"],["fivem_id","FiveM ID"]]
+ "Champs avancés":[["civilite","Civilité"],["mobile","Mobile"],["nir","NIR"],["societe","Société"],["profession","Profession"],["fonction","Fonction"],["siret","SIRET"],["siren","SIREN"],["marque","Marque"],["modele","Modèle"],["immatriculation","Immatriculation"],["fivem_id","FiveM ID"]]
 };
 const groupIcons={"Identité":"user","Naissance":"calendar","Contact":"contact","Localisation":"pin","FiveM / GTA RP":"gamepad","Champs avancés":"sliders"};
 const fieldIcons={
  nom_famille:"user",prenom:"user",nom_naissance:"user",nom_affichage:"user",nom_utilisateur:"user",civilite:"user",genre:"user",
  jour_naissance:"calendar",mois_naissance:"calendar",annee_naissance:"calendar",date_naissance:"calendar",ville_naissance:"pin",lieu_naissance:"pin",
- email:"mail",telephone:"phone",mobile:"phone",adresse_ip:"globe",discord_id:"message",
+ email:"mail",telephone:"phone",mobile:"phone",adresse_ip:"globe",discord_id:"message",nir:"card",
  adresse:"pin",complement_adresse:"pin",ville:"pin",code_postal:"pin",departement:"map",region:"map",pays:"globe",
  societe:"building",profession:"briefcase",fonction:"briefcase",siret:"building",siren:"building",
  marque:"car",modele:"car",vin_plaque:"car",immatriculation:"car",numero_serie:"tag",
@@ -68,7 +68,7 @@ const resultEmojis={
  jour_naissance:"🎂",mois_naissance:"📅",annee_naissance:"📅",date_naissance:"📅",ville_naissance:"📍",lieu_naissance:"📍",
  email:"📧",telephone:"📱",mobile:"📱",adresse_ip:"🌐",discord_id:"💬",
  adresse:"🏠",complement_adresse:"🏠",ville:"🏙️",code_postal:"📮",departement:"🗺️",region:"🗺️",pays:"🌍",
- societe:"🏢",profession:"💼",fonction:"💼",siret:"🏢",siren:"🏢",
+ societe:"🏢",profession:"💼",fonction:"💼",siret:"🏢",siren:"🏢",nir:"🪪",
  marque:"🚘",modele:"🚘",vin_plaque:"🚘",immatriculation:"🚘",numero_serie:"🔖",
  iban:"💳",bic:"💳",steam_id:"🎮",fivem_license:"🎮",fivem_license2:"🎮",fivem_id:"🎮",xbox_live_id:"🎮",live_id:"🎮"
 };
@@ -543,7 +543,7 @@ $("#searchBtn").addEventListener("click",async()=>{
    try{
     const headers={"Content-Type":"application/json","Accept":"application/json"};
     if(source.api)headers["X-API-Key"]=source.api;
-    const {response,raw}=await fetchWithTimeout(source.endpoint,{method:"POST",headers,body:JSON.stringify(criteria)});
+  const {response,raw}=await fetchWithTimeout(source.endpoint,{method:"POST",headers,body:JSON.stringify({...criteria,per_page:10})});
     try{body=JSON.parse(raw)}catch{throw Error(`La source a renvoyé une réponse illisible (HTTP ${response.status}).`)}
     if(!response.ok)throw Error(errorMessage(body?.error??body?.message??body?.detail??`La source a répondu HTTP ${response.status}.`));
     break;
