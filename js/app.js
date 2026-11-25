@@ -98,6 +98,9 @@ let adminUsersOffset=0;
 let selectedAdminUser=null;
 let siteMaintenance=false;
 let siteMaintenanceReason="";
+const searchServiceBlocked=true;
+const searchServiceBlockReason="La recherche est temporairement indisponible : le fournisseur bloque les requêtes du navigateur (CORS).";
+let searchServiceBypassed=false;
 const adminPageSize=100;
 const fields=$("#fields");
 
@@ -213,13 +216,25 @@ async function loadMaintenanceStatus(){
 function renderMaintenanceStatus(){
  const overlay=$("#maintenanceOverlay");
  if(!overlay)return;
- $("#maintenanceReason").textContent=siteMaintenanceReason||"Maintenance en cours.";
+ const blocked=siteMaintenance||searchServiceBlocked;
+ const reason=searchServiceBlocked?searchServiceBlockReason:siteMaintenanceReason||"Maintenance en cours.";
+ $("#maintenanceReason").textContent=reason;
+ const title=overlay.querySelector("h2");
+ if(title)title.textContent=searchServiceBlocked?"Recherche temporairement indisponible":"Site temporairement fermé";
  const adminAllowed=Boolean(currentUser?.is_admin);
- overlay.hidden=!siteMaintenance||adminAllowed;
+ const accountLoginVisible=currentRoutePage()==="account"&&!currentUser;
+ overlay.hidden=!blocked||searchServiceBypassed&&adminAllowed||accountLoginVisible;
+ let bypassButton=$("#searchServiceBypass");
+ if(!bypassButton){
+  bypassButton=document.createElement("button");bypassButton.id="searchServiceBypass";bypassButton.type="button";bypassButton.className="secondary-button";bypassButton.textContent="Contourner et accéder au site";
+  bypassButton.addEventListener("click",()=>{if(!currentUser?.is_admin)return;searchServiceBypassed=true;renderMaintenanceStatus()});
+  overlay.querySelector(".maintenance-card")?.appendChild(bypassButton);
+ }
+ bypassButton.hidden=!adminAllowed||searchServiceBypassed;
  const badge=$("#maintenanceStatusBadge");
  const desc=$("#maintenanceAdminDescription");
- if(badge)badge.textContent=siteMaintenance?"FERMÉ":"OUVERT";
- if(desc)desc.textContent=siteMaintenance?`Le site est fermé aux utilisateurs. Raison : ${siteMaintenanceReason}`:"Le site est actuellement ouvert.";
+ if(badge)badge.textContent=blocked?"FERMÉ":"OUVERT";
+ if(desc)desc.textContent=blocked?`Le site est fermé aux utilisateurs. Raison : ${reason}`:"Le site est actuellement ouvert.";
 }
 async function setMaintenance(enabled,reason=""){
  const client=supabaseReady();
@@ -252,6 +267,7 @@ function page(id){
  document.querySelectorAll("nav button").forEach(item=>item.classList.toggle("active",item.dataset.page===id));
  document.querySelectorAll(".header-button").forEach(item=>item.classList.toggle("active",item.dataset.page===id));
  document.title=`NEXUS — ${({home:"Accueil",search:"Recherche",account:"Connexion",bavur:"BAVUR",blocus:"BLOCUS",discord:"Discord",admin:"Administration"})[id]||"NEXUS"}`;
+ renderMaintenanceStatus();
  if(id==="account")renderAccount();
  if(id==="admin")openAdmin();
  if(id==="bavur"||id==="blocus")loadVideos(id.toUpperCase());
@@ -609,6 +625,7 @@ function renderAccount(){
  document.querySelectorAll(".upload-form").forEach(form=>{form.hidden=!signedIn});
  if(signedIn)$("#profileUsername").textContent=currentUser.username;
  updateCreditDisplays();
+ renderMaintenanceStatus();
 }
 async function refreshSession(){
  const client=getSupabase();
