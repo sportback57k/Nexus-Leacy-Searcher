@@ -519,14 +519,14 @@ $("#searchBtn").addEventListener("click",async()=>{
  }
  const user=currentUser;
  if(!user.unlimited_credits&&Number(user.credits)<1){showState("Crédits insuffisants","Tu n’as plus de crédits disponibles. Consulte ton solde et le prochain renouvellement.");return}
- const endpoint=(window.NEXUS_CONFIG?.endpoint||"").trim();
- if(!endpoint){showState("Source non configurée","Ajoute une source de recherche autorisée dans js/config.js.");return}
+ const endpoints=(Array.isArray(window.NEXUS_CONFIG?.endpoints)?window.NEXUS_CONFIG.endpoints:[]).map(endpoint=>String(endpoint||"").trim()).filter(Boolean);
+ if(!endpoints.length){showState("Source non configurée","Ajoute au moins une source de recherche dans js/config.js.");return}
  searchButton.disabled=true;
  const buttonLabel=searchButton.querySelector("span");
  const originalLabel=buttonLabel?.textContent;
  if(buttonLabel)buttonLabel.textContent="Recherche en cours…";
  try{
-  showState("Recherche…","Interrogation de la source configurée. Cela peut prendre quelques secondes.");
+  showState("Recherche…",endpoints.length>1?`Essai de ${endpoints.length} sources de recherche.`:"Interrogation de la source configurée. Cela peut prendre quelques secondes.");
   const client=supabaseReady();
   // Revalidate access before contacting the source, even if this tab has a cached profile.
   const {data:access,error:accessError}=await searchRpc(client,"nexus_get_credit_status",{});
@@ -534,10 +534,19 @@ $("#searchBtn").addEventListener("click",async()=>{
   const allowed=Array.isArray(access)?access[0]:access;
   if(!allowed||allowed.id!==user.id||currentUser?.id!==user.id)throw Error("Session expirée ou révoquée. Reconnecte-toi.");
   if(!allowed.is_admin&&Number(allowed.credits)<1)throw Error("Crédits insuffisants.");
-  const {response,raw}=await fetchWithTimeout(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(criteria)});
-  let body;
-  try{body=JSON.parse(raw)}catch{throw Error(`La source a renvoyé une réponse illisible (HTTP ${response.status}).`)}
-  if(!response.ok)throw Error(errorMessage(body?.error??body?.message??body?.detail??`La source a répondu HTTP ${response.status}.`));
+  let body,lastSourceError;
+  for(const endpoint of endpoints){
+   try{
+    const headers={"Content-Type":"application/json","Accept":"application/json"};
+    const apiKey=(window.NEXUS_CONFIG?.apiKey||"").trim();
+    if(apiKey)headers["X-API-Key"]=apiKey;
+    const {response,raw}=await fetchWithTimeout(endpoint,{method:"POST",headers,body:JSON.stringify(criteria)});
+    try{body=JSON.parse(raw)}catch{throw Error(`La source a renvoyé une réponse illisible (HTTP ${response.status}).`)}
+    if(!response.ok)throw Error(errorMessage(body?.error??body?.message??body?.detail??`La source a répondu HTTP ${response.status}.`));
+    break;
+   }catch(error){lastSourceError=error;body=undefined}
+  }
+  if(body===undefined)throw Error(`Toutes les sources ont échoué. ${errorMessage(lastSourceError)}`);
   const results=extractSearchResults(body);
   if(currentUser?.id!==user.id)throw Error("Ta session a changé. Connecte-toi puis relance la recherche.");
   // Only debit once a valid response is available; failed requests cost no credit.

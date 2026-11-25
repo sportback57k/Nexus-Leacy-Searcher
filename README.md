@@ -14,9 +14,9 @@ Site statique compatible Vercel, avec recherche, comptes Supabase, crédits quot
 
 ## Configuration publique
 
-`js/config.js` contient l’URL Supabase, la clé publique publishable et l’endpoint de recherche. Aucune clé secrète ou service role ne doit figurer dans le site.
+`js/config.js` contient l’URL Supabase, la clé publique publishable et la liste ordonnée `endpoints` des sources de recherche. Ajoute ou retire les URL dans ce tableau ; le site essaie chaque source dans l’ordre jusqu’à obtenir une réponse HTTP valide. Aucune clé secrète ou service role ne doit figurer dans le site.
 
-La source doit autoriser le domaine du site via CORS. Le moteur utilise directement l’endpoint configuré. Aucun proxy n’est fourni. Une réponse valide, même vide, coûte un crédit ; une erreur de la source ne déclenche aucun débit. Une erreur d’enregistrement de l’historique ne masque pas les résultats déjà payés.
+Chaque source doit autoriser le domaine du site via CORS. Le moteur utilise directement les endpoints configurés. Aucun proxy n’est fourni. Une réponse valide, même vide, coûte un crédit ; les sources en erreur sont ignorées au profit de la suivante et l’échec de toutes les sources ne déclenche aucun débit. Une erreur d’enregistrement de l’historique ne masque pas les résultats déjà payés.
 
 Le client Supabase chargé par CDN est fixé à `2.119.0`.
 
