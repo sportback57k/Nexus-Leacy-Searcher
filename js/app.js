@@ -521,9 +521,9 @@ $("#searchBtn").addEventListener("click",async()=>{
  if(!user.unlimited_credits&&Number(user.credits)<1){showState("Crédits insuffisants","Tu n’as plus de crédits disponibles. Consulte ton solde et le prochain renouvellement.");return}
  const config=window.NEXUS_CONFIG||{};
  const sources=(Array.isArray(config.endpoints)?config.endpoints:config.endpoint?[config.endpoint]:[])
-  .map(source=>typeof source==="string"?{url:source,apiKey:config.apiKey}:{url:source?.url,apiKey:source?.apiKey})
-  .map(source=>({url:String(source.url||"").trim(),apiKey:String(source.apiKey||"").trim()}))
-  .filter(source=>source.url);
+  .map(source=>typeof source==="string"?{endpoint:source,api:config.apiKey}:{endpoint:source?.endpoint||source?.url,api:source?.api||source?.apiKey})
+  .map(source=>({endpoint:String(source.endpoint||"").trim(),api:String(source.api||"").trim()}))
+  .filter(source=>source.endpoint);
  if(!sources.length){showState("Source non configurée","Ajoute au moins un couple endpoint et clé API dans js/config.js.");return}
  searchButton.disabled=true;
  const buttonLabel=searchButton.querySelector("span");
@@ -542,8 +542,8 @@ $("#searchBtn").addEventListener("click",async()=>{
   for(const source of sources){
    try{
     const headers={"Content-Type":"application/json","Accept":"application/json"};
-    if(source.apiKey)headers["X-API-Key"]=source.apiKey;
-    const {response,raw}=await fetchWithTimeout(source.url,{method:"POST",headers,body:JSON.stringify(criteria)});
+    if(source.api)headers["X-API-Key"]=source.api;
+    const {response,raw}=await fetchWithTimeout(source.endpoint,{method:"POST",headers,body:JSON.stringify(criteria)});
     try{body=JSON.parse(raw)}catch{throw Error(`La source a renvoyé une réponse illisible (HTTP ${response.status}).`)}
     if(!response.ok)throw Error(errorMessage(body?.error??body?.message??body?.detail??`La source a répondu HTTP ${response.status}.`));
     break;
